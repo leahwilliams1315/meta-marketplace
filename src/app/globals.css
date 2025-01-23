@@ -3,19 +3,50 @@
 @tailwind utilities;
 
 :root {
+  --primary: #228be6;
+  --primary-dark: #1971c2;
+  --secondary: #e64980;
+  --accent: #fab005;
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #212529;
+  --muted: #f8f9fa;
+  --muted-foreground: #495057;
+  --border: #dee2e6;
+  --card: #ffffff;
+  --card-foreground: #212529;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #ffffff;
+    --foreground: #212529;
   }
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply bg-background text-foreground;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-dark text-white font-medium px-6 py-3 rounded-lg transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary hover:opacity-90 text-white font-medium px-6 py-3 rounded-lg transition-colors;
+  }
+
+  .card {
+    @apply bg-card border border-border rounded-xl shadow-sm p-8;
+  }
+
+  .input {
+    @apply w-full border border-border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary transition-shadow;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-foreground mb-2;
+  }
 }

@@ -1,0 +1,50 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id
+  stripeAccountId String?
+  marketplaces  Marketplace[] @relation("MarketplaceOwners")
+  memberOf      Marketplace[] @relation("MarketplaceMembers")
+  products      Product[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Marketplace {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  owners      User[]    @relation("MarketplaceOwners")
+  members     User[]    @relation("MarketplaceMembers")
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id            String      @id @default(cuid())
+  name          String
+  description   String
+  price         Int
+  images        String[]
+  marketplace   Marketplace @relation(fields: [marketplaceId], references: [id])
+  marketplaceId String
+  seller        User        @relation(fields: [sellerId], references: [id])
+  sellerId      String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}

@@ -1,10 +1,11 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import { NavBar } from "@/components/navbar";
-import "./globals.css"; // or wherever your tailwind styles are
+import "./globals.css";
 
 export const metadata = {
   title: "MetaMarket",
-  description: "Multi-marketplace platform",
+  description:
+    "A meta marketplace for artisans to connect, collaborate, and create.",
 };
 
 export default function RootLayout({
@@ -13,13 +14,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="scroll-smooth">
       <ClerkProvider>
-        <body className="min-h-screen flex flex-col">
-          {/* Shared top nav for the entire site */}
+        <body className="min-h-screen flex flex-col bg-background text-foreground font-body">
           <NavBar />
-          {/* Main content area */}
-          <main className="flex-1">{children}</main>
+          <main className="flex-1 container mx-auto px-6 py-8">{children}</main>
         </body>
       </ClerkProvider>
     </html>

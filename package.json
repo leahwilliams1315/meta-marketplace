@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "tunnel": "ngrok http --domain=quick-factually-wildcat.ngrok-free.app 3000"
+    "tunnel": "ngrok http --domain=quick-factually-wildcat.ngrok-free.app 3000",
+    "dump-repo": "tsx repo-to-text-script.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.9.15",
@@ -22,7 +23,8 @@
     "stripe": "^17.5.0",
     "svix": "^1.45.1",
     "tailwind-merge": "^2.6.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "tsx": "^4.19.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

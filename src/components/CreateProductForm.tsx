@@ -17,13 +17,14 @@ export const CreateProductForm = ({
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("0"); // keep as string for input
+  const [price, setPrice] = useState("0");
   const [images, setImages] = useState<string[]>([]);
   const [selectedMarketplaceId, setSelectedMarketplaceId] = useState(
     marketplaces[0]?.id ?? ""
   );
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [tempImage, setTempImage] = useState("");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,12 +47,10 @@ export const CreateProductForm = ({
         const data = await res.json();
         throw new Error(data.error || "Failed to create product");
       }
-      // Clear the form
       setName("");
       setDescription("");
       setPrice("0");
       setImages([]);
-      // Possibly refresh the page to show the updated product list
       router.refresh();
     } catch (err) {
       setError((err as Error).message);
@@ -60,8 +59,6 @@ export const CreateProductForm = ({
     }
   }
 
-  // For demonstration: a simple input to push one image URL onto `images`
-  const [tempImage, setTempImage] = useState("");
   function handleAddImage() {
     if (tempImage) {
       setImages([...images, tempImage]);
@@ -71,12 +68,11 @@ export const CreateProductForm = ({
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      {error && <div className="text-red-600">{error}</div>}
-
+      {error && <div className="text-destructive">{error}</div>}
       <div>
         <label className="block mb-1 font-medium">Marketplace</label>
         <select
-          className="p-2 border rounded w-full"
+          className="input w-full"
           value={selectedMarketplaceId}
           onChange={(e) => setSelectedMarketplaceId(e.target.value)}
           required
@@ -88,11 +84,10 @@ export const CreateProductForm = ({
           ))}
         </select>
       </div>
-
       <div>
         <label className="block mb-1 font-medium">Name</label>
         <input
-          className="p-2 border rounded w-full"
+          className="input w-full"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -100,22 +95,20 @@ export const CreateProductForm = ({
           disabled={loading}
         />
       </div>
-
       <div>
         <label className="block mb-1 font-medium">Description</label>
         <textarea
-          className="p-2 border rounded w-full"
+          className="input w-full"
           rows={3}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           disabled={loading}
         />
       </div>
-
       <div>
         <label className="block mb-1 font-medium">Price (in cents)</label>
         <input
-          className="p-2 border rounded w-full"
+          className="input w-full"
           type="number"
           min="0"
           value={price}
@@ -123,12 +116,11 @@ export const CreateProductForm = ({
           disabled={loading}
         />
       </div>
-
       <div>
         <label className="block mb-1 font-medium">Image URL</label>
         <div className="flex gap-2">
           <input
-            className="p-2 border rounded w-full"
+            className="input flex-1"
             type="text"
             value={tempImage}
             onChange={(e) => setTempImage(e.target.value)}
@@ -137,7 +129,7 @@ export const CreateProductForm = ({
           <button
             type="button"
             onClick={handleAddImage}
-            className="px-4 py-2 bg-gray-200 rounded"
+            className="btn btn-secondary"
             disabled={loading}
           >
             Add
@@ -151,12 +143,7 @@ export const CreateProductForm = ({
           </ul>
         )}
       </div>
-
-      <button
-        type="submit"
-        className="px-4 py-2 bg-blue-600 text-white rounded"
-        disabled={loading}
-      >
+      <button type="submit" className="btn btn-primary" disabled={loading}>
         {loading ? "Creating..." : "Create Product"}
       </button>
     </form>

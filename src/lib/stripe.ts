@@ -10,27 +10,33 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 
 export async function createConnectAccount(userId: string, email: string) {
-  const account = await stripe.accounts.create({
-    type: "express",
-    country: "CA",
-    email,
-    capabilities: {
-      card_payments: { requested: true },
-      transfers: { requested: true },
-    },
-  });
+  try {
+    // Create a new express account for the artisan if one doesn't exist yet.
+    const account = await stripe.accounts.create({
+      type: "express",
+      country: "CA",
+      email,
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      },
+    });
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { stripeAccountId: account.id },
-  });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { stripeAccountId: account.id },
+    });
 
-  const accountLink = await stripe.accountLinks.create({
-    account: account.id,
-    refresh_url: `${process.env.NEXT_PUBLIC_URL}/onboarding/refresh`,
-    return_url: `${process.env.NEXT_PUBLIC_URL}/onboarding/complete`,
-    type: "account_onboarding",
-  });
+    const accountLink = await stripe.accountLinks.create({
+      account: account.id,
+      refresh_url: `${process.env.NEXT_PUBLIC_URL}/onboarding/refresh`,
+      return_url: `${process.env.NEXT_PUBLIC_URL}/onboarding/complete`,
+      type: "account_onboarding",
+    });
 
-  return accountLink.url;
+    return accountLink.url;
+  } catch (error) {
+    console.error("Error in createConnectAccount:", error);
+    throw error;
+  }
 }

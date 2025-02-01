@@ -2,28 +2,25 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col justify-center">
       <div className="max-w-5xl mx-auto px-4 py-16 sm:py-24">
         {/* Hero Section */}
         <div className="text-center mb-24">
-          <h1 className="text-5xl sm:text-6xl font-bold mb-8 tracking-tight">
+          <h1 className="text-5xl sm:text-6xl font-display font-bold mb-8 tracking-tight">
             Welcome to MetaMarket
           </h1>
           <p className="text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
-            Create and manage your own marketplace, or join existing ones. The
-            platform where communities and commerce come together.
+            Create and manage your own marketplace, or join existing ones.
+            Connect communities and commerce in a space crafted for creators.
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center">
             <Link
               href="/create-marketplace"
-              className="btn-primary text-center text-lg"
+              className="btn btn-primary text-lg"
             >
               Create a Marketplace
             </Link>
-            <Link
-              href="/marketplaces"
-              className="btn-secondary text-center text-lg"
-            >
+            <Link href="/marketplaces" className="btn btn-secondary text-lg">
               Browse Marketplaces
             </Link>
           </div>
@@ -51,8 +48,8 @@ export default function Home() {
               Quick Setup
             </h3>
             <p className="text-muted-foreground text-lg leading-relaxed text-center">
-              Create your marketplace in minutes with our intuitive onboarding
-              process
+              Build your marketplace swiftly with an intuitive interface
+              designed for ease.
             </p>
           </div>
 
@@ -76,7 +73,8 @@ export default function Home() {
               Community First
             </h3>
             <p className="text-muted-foreground text-lg leading-relaxed text-center">
-              Build and grow your community with powerful management tools
+              Foster connections with tools designed to build and support
+              thriving communities.
             </p>
           </div>
 
@@ -100,7 +98,8 @@ export default function Home() {
               Secure Payments
             </h3>
             <p className="text-muted-foreground text-lg leading-relaxed text-center">
-              Integrated with Stripe for safe and reliable transactions
+              Integrated Stripe payments ensure every transaction is secure and
+              smooth.
             </p>
           </div>
         </div>
@@ -112,12 +111,12 @@ export default function Home() {
               Ready to start your marketplace journey?
             </h2>
             <p className="text-xl mb-10 text-muted-foreground leading-relaxed">
-              Join thousands of creators and entrepreneurs who are building
-              their dream marketplaces.
+              Join a community of creators who value quality, craftsmanship, and
+              authentic experiences.
             </p>
             <Link
               href="/create-marketplace"
-              className="btn-primary inline-block text-lg px-8 py-4"
+              className="btn btn-primary inline-block text-lg px-8 py-4"
             >
               Create Your Marketplace
             </Link>

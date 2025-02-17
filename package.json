@@ -13,6 +13,7 @@
   "dependencies": {
     "@clerk/nextjs": "^6.9.15",
     "@prisma/client": "^6.2.1",
+    "@radix-ui/react-slot": "^1.1.2",
     "@supabase/supabase-js": "^2.48.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

@@ -68,26 +68,28 @@ export async function POST(req: Request) {
 // For the GET request
 export async function GET() {
   const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Not logged in" }, { status: 401 });
-  }
 
   try {
-    // Find all marketplaces where user is an owner or member
     const marketplaces = await prisma.marketplace.findMany({
-      where: {
-        OR: [
-          { owners: { some: { id: userId } } },
-          { members: { some: { id: userId } } },
-        ],
-      },
       include: {
         owners: true,
         members: true,
       },
     });
 
-    return NextResponse.json(marketplaces);
+    // Add role flags to each marketplace
+    const enrichedMarketplaces = marketplaces.map((marketplace) => ({
+      ...marketplace,
+      role: userId
+        ? marketplace.owners.some((owner) => owner.id === userId)
+          ? "owner"
+          : marketplace.members.some((member) => member.id === userId)
+          ? "member"
+          : null
+        : null,
+    }));
+
+    return NextResponse.json(enrichedMarketplaces);
   } catch (error) {
     console.error("GET /api/marketplaces error:", error);
     return NextResponse.json(

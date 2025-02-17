@@ -1,17 +1,23 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
   provider = "prisma-client-js"
 }
 
+enum UserRole {
+  CUSTOMER
+  ARTISAN
+  HOST
+}
+
 model User {
   id              String        @id
   stripeAccountId String?
-  role            String?       // e.g., "ARTISAN", "CUSTOMER", "HOST" 
-  // or an enum if you prefer
+  role            UserRole     @default(CUSTOMER)
   city            String?       // For location-based filtering
   marketplaces    Marketplace[] @relation("MarketplaceOwners")
   memberOf        Marketplace[] @relation("MarketplaceMembers")

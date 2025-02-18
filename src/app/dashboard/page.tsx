@@ -4,6 +4,10 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import StripeAccountCard from "@/components/StripeAccountCard";
+import { ProductSyncBadge } from "@/components/ProductSyncBadge";
+import { SyncAllProductsButton } from "@/components/SyncAllProductsButton";
+import { stripe } from "@/lib/stripe";
+import { Product } from "@prisma/client";
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -32,6 +36,26 @@ export default async function DashboardPage() {
       (m, i, self) => self.findIndex((x) => x.id === m.id) === i
     );
     const { products } = user;
+
+    // Fetch all Stripe products and zip them with local products
+    let enhancedProducts: (Product & { isSynced?: boolean })[] = products;
+    if (user.stripeAccountId) {
+      const stripeProductsResponse = await stripe.products.list(
+        { limit: 100 },
+        { stripeAccount: user.stripeAccountId }
+      );
+      const stripeProducts = stripeProductsResponse.data;
+      const stripeMap: Record<string, (typeof stripeProducts)[0]> = {};
+      for (const sp of stripeProducts) {
+        if (sp.metadata && sp.metadata.localProductId) {
+          stripeMap[sp.metadata.localProductId] = sp;
+        }
+      }
+      enhancedProducts = products.map((product) => ({
+        ...product,
+        isSynced: Boolean(stripeMap[product.id]),
+      }));
+    }
 
     return (
       <div className="min-h-screen bg-[#faf9f7] pt-24">
@@ -118,30 +142,71 @@ export default async function DashboardPage() {
                   + Add Product
                 </Link>
               </div>
-              {products.length === 0 ? (
+              {enhancedProducts.length === 0 ? (
                 <div className="bg-white rounded-lg border border-[#E5E5E5] p-6">
                   <p className="text-[#666666]">
                     You haven&apos;t created any products yet.
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {products.map((product) => (
-                    <div
-                      key={product.id}
-                      className="bg-white rounded-lg border border-[#E5E5E5] p-6"
-                    >
-                      <h3 className="font-medium text-[#453E3E] mb-2">
-                        {product.name}
-                      </h3>
-                      <p className="text-[#666666] text-sm mb-4 line-clamp-2">
-                        {product.description}
-                      </p>
-                      <p className="font-bold text-[#453E3E]">
-                        ${(product.price / 100).toFixed(2)}
-                      </p>
-                    </div>
-                  ))}
+                <div>
+                  {/* Sync All Button */}
+                  <SyncAllProductsButton
+                    products={enhancedProducts.map((p) => ({
+                      id: p.id,
+                      name: p.name,
+                      description: p.description,
+                      stripeProductId: p.stripeProductId,
+                      isSynced: p.isSynced,
+                    }))}
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {enhancedProducts.map((product) => (
+                      <div
+                        key={product.id}
+                        className="bg-white rounded-lg border border-[#E5E5E5] p-6 hover:shadow-lg transition-shadow duration-200 relative group"
+                      >
+                        <div className="absolute top-4 right-4">
+                          <ProductSyncBadge
+                            productId={product.id}
+                            name={product.name}
+                            description={product.description}
+                            isSynced={!!product.isSynced}
+                          />
+                        </div>
+                        <h3 className="font-medium text-[#453E3E] mb-2">
+                          {product.name}
+                        </h3>
+                        <p className="text-[#666666] text-sm mb-4 line-clamp-2">
+                          {product.description}
+                        </p>
+                        <p className="font-bold text-[#453E3E] text-lg">
+                          ${(product.price / 100).toFixed(2)}
+                        </p>
+                        <div className="mt-4 pt-4 border-t border-[#E5E5E5] flex items-center justify-between">
+                          <Link
+                            href={`/create-product?productId=${product.id}`}
+                            className="inline-flex items-center text-[#F97316] text-sm font-medium hover:text-[#F97316]/90 transition-colors"
+                          >
+                            <svg
+                              className="w-4 h-4 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              />
+                            </svg>
+                            Edit
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

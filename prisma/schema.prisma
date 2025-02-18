@@ -46,6 +46,7 @@ model Product {
   description   String
   price         Int
   images        Json @default("[]") // Stored as JSON array
+  stripeProductId String?    // Stripe product identifier, optional
   // e.g., categories or tags for more robust searching
   marketplace   Marketplace @relation(fields: [marketplaceId], references: [id])
   marketplaceId String

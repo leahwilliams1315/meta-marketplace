@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 
 interface Marketplace {
   id: string;
@@ -9,50 +8,63 @@ interface Marketplace {
   slug: string;
 }
 
+interface Product {
+  name: string;
+  description: string;
+  price: number;
+  images: string[];
+  marketplaceId: string;
+}
+
+interface CreateProductFormProps {
+  marketplaces: Marketplace[];
+  initialData?: Product | null;
+  onSubmitForm: (formData: Product) => Promise<void>;
+}
+
 export const CreateProductForm = ({
   marketplaces,
-}: {
-  marketplaces: Marketplace[];
-}) => {
-  const router = useRouter();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("0");
-  const [images, setImages] = useState<string[]>([]);
+  initialData,
+  onSubmitForm,
+}: CreateProductFormProps) => {
+  const [name, setName] = useState(initialData?.name || "");
+  const [description, setDescription] = useState(
+    initialData?.description || ""
+  );
+  const [price, setPrice] = useState(
+    initialData ? initialData.price.toString() : "0"
+  );
+  const [images, setImages] = useState<string[]>(initialData?.images || []);
   const [selectedMarketplaceId, setSelectedMarketplaceId] = useState(
-    marketplaces[0]?.id ?? ""
+    initialData?.marketplaceId || (marketplaces[0]?.id ?? "")
   );
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [tempImage, setTempImage] = useState("");
 
+  useEffect(() => {
+    if (initialData) {
+      setName(initialData.name);
+      setDescription(initialData.description);
+      setPrice(initialData.price.toString());
+      setImages(initialData.images);
+      setSelectedMarketplaceId(initialData.marketplaceId);
+    }
+  }, [initialData]);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     try {
-      const res = await fetch("/api/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          description,
-          price: parseInt(price, 10),
-          images,
-          marketplaceId: selectedMarketplaceId,
-        }),
+      await onSubmitForm({
+        name,
+        description,
+        price: parseInt(price, 10),
+        images,
+        marketplaceId: selectedMarketplaceId,
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to create product");
-      }
-      setName("");
-      setDescription("");
-      setPrice("0");
-      setImages([]);
-      router.refresh();
-    } catch (err) {
+    } catch (err: unknown) {
       setError((err as Error).message);
     } finally {
       setLoading(false);
@@ -144,7 +156,13 @@ export const CreateProductForm = ({
         )}
       </div>
       <button type="submit" className="btn btn-primary" disabled={loading}>
-        {loading ? "Creating..." : "Create Product"}
+        {loading
+          ? initialData
+            ? "Updating..."
+            : "Creating..."
+          : initialData
+          ? "Update Product"
+          : "Create Product"}
       </button>
     </form>
   );

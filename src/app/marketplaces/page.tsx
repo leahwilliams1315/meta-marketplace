@@ -66,8 +66,8 @@ export default async function MarketplacesPage() {
                       variant="secondary"
                       className={
                         m.role === "owner"
-                          ? "bg-[#FEE4D8] hover:bg-[#FEE4D8] text-[#F97316] font-medium text-xs"
-                          : "bg-[#F3F4F6] hover:bg-[#F3F4F6] text-[#6B7280] font-medium text-xs"
+                          ? "bg-[#FEE4D8] transition-transform transform hover:scale-105 text-[#F97316] font-medium text-xs"
+                          : "bg-[#F3F4F6] transition-transform transform hover:scale-105 text-[#6B7280] font-medium text-xs"
                       }
                     >
                       {m.role === "owner" ? "Owner" : "Member"}

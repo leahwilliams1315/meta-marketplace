@@ -1,15 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
-
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: ["query"],
-  });
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Removed global caching to prevent potential prepared statement conflicts with PgBouncer
+const prisma = new PrismaClient({
+  log: ["query"],
+});
 
 export default prisma;

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import StripeAccountCard from "@/components/StripeAccountCard";
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -12,29 +13,24 @@ export default async function DashboardPage() {
   }
 
   try {
-    // Only include the fields we know exist
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
+      include: {
         products: true,
         memberOf: true,
         marketplaces: true,
+        // Ensure stripeAccountId is included
       },
     });
 
     if (!user) {
-      await prisma.user.create({
-        data: { id: userId },
-      });
-      // Refresh the page to get the new user data
+      await prisma.user.create({ data: { id: userId } });
       redirect("/dashboard");
     }
 
     const userMarketplaces = [...user.memberOf, ...user.marketplaces].filter(
       (m, i, self) => self.findIndex((x) => x.id === m.id) === i
     );
-
     const { products } = user;
 
     return (
@@ -45,8 +41,16 @@ export default async function DashboardPage() {
               My Dashboard
             </h1>
             <p className="text-[#666666] mb-12">
-              Manage your products and view your marketplace memberships.
+              Manage your products, view your marketplace memberships, and track
+              your Stripe account insights.
             </p>
+
+            {/* Stripe Integration Section */}
+            <div className="mb-12 text-center">
+              <StripeAccountCard
+                initialStripeAccountId={user.stripeAccountId}
+              />
+            </div>
 
             {/* Marketplaces Section */}
             <div className="mb-12">
@@ -68,7 +72,11 @@ export default async function DashboardPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {userMarketplaces.map((m) => (
-                    <Link key={m.id} href={`/marketplace/${m.slug}`}>
+                    <Link
+                      key={m.id}
+                      href={`/marketplace/${m.slug}`}
+                      className="block"
+                    >
                       <div className="group h-full bg-white rounded-lg border border-[#E5E5E5] p-6 transition-shadow duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
                         <div className="flex justify-between items-start mb-4">
                           <h3 className="text-lg font-semibold text-[#453E3E]">
@@ -110,7 +118,6 @@ export default async function DashboardPage() {
                   + Add Product
                 </Link>
               </div>
-
               {products.length === 0 ? (
                 <div className="bg-white rounded-lg border border-[#E5E5E5] p-6">
                   <p className="text-[#666666]">

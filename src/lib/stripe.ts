@@ -1,5 +1,4 @@
 import Stripe from "stripe";
-import prisma from "./prisma";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error("Missing STRIPE_SECRET_KEY");
@@ -9,34 +8,30 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-12-18.acacia",
 });
 
-export async function createConnectAccount(userId: string, email: string) {
-  try {
-    // Create a new express account for the artisan if one doesn't exist yet.
-    const account = await stripe.accounts.create({
-      type: "express",
-      country: "CA",
-      email,
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
-      },
-    });
+/**
+ * Create a standard connected account and generate an onboarding link.
+ * This is configured for Direct Charges and full Stripe Dashboard access.
+ */
+export async function createConnectAccount(
+  userId: string,
+  email: string
+): Promise<{ accountId: string; url: string }> {
+  // Create a Standard account for the merchant
+  const account = await stripe.accounts.create({
+    type: "standard",
+    email,
+    business_type: "individual", // Replace with "company" if applicable
+  });
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { stripeAccountId: account.id },
-    });
+  // (Optional) Save the account.id in your database associated with the userId here
 
-    const accountLink = await stripe.accountLinks.create({
-      account: account.id,
-      refresh_url: `${process.env.NEXT_PUBLIC_URL}/onboarding/refresh`,
-      return_url: `${process.env.NEXT_PUBLIC_URL}/onboarding/complete`,
-      type: "account_onboarding",
-    });
+  // Generate an onboarding link for the Standard account
+  const accountLink = await stripe.accountLinks.create({
+    account: account.id,
+    refresh_url: "https://yourapp.com/stripe/refresh", // Replace with your actual refresh URL
+    return_url: "https://yourapp.com/stripe/return", // Replace with your actual return URL
+    type: "account_onboarding",
+  });
 
-    return accountLink.url;
-  } catch (error) {
-    console.error("Error in createConnectAccount:", error);
-    throw error;
-  }
+  return { accountId: account.id, url: accountLink.url };
 }

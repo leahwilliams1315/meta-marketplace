@@ -2,9 +2,11 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import type { Marketplace, Product, User } from "@prisma/client";
+import Image from "next/image";
 
 type ProductWithSeller = Product & {
   seller: User;
+  images: string[];
 };
 
 type MarketplaceWithRelations = Marketplace & {
@@ -49,6 +51,10 @@ export default async function MarketplacePage({
   }
 
   const typedMarketplace = marketplace as MarketplaceWithRelations;
+  const isOwner = typedMarketplace.owners.some((owner) => owner.id === userId);
+  const isMember = typedMarketplace.members.some(
+    (member) => member.id === userId
+  );
 
   return (
     <div className="py-12">
@@ -63,12 +69,14 @@ export default async function MarketplacePage({
             key={product.id}
             className="card hover:shadow-md transition-shadow"
           >
-            {product.images[0] && (
-              <div className="aspect-video mb-4 rounded-lg overflow-hidden">
-                <img
+            {Array.isArray(product.images) && product.images[0] && (
+              <div className="aspect-video mb-4 rounded-lg overflow-hidden relative">
+                <Image
                   src={product.images[0]}
                   alt={product.name}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
               </div>
             )}
@@ -88,17 +96,68 @@ export default async function MarketplacePage({
         ))}
       </div>
 
-      <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-4">Members</h2>
-        <div className="flex flex-wrap gap-2">
-          {typedMarketplace.members.map((member) => (
-            <div
-              key={member.id}
-              className="px-3 py-1 rounded-full bg-muted text-muted-foreground text-sm"
-            >
-              {member.id}
+      <div className="mt-12 bg-white rounded-lg border border-[#E5E5E5] p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-[#453E3E]">
+            Marketplace Team
+          </h2>
+          {(isOwner || isMember) && (
+            <span className="px-3 py-1 rounded-full bg-[#FEE4D8] text-[#F97316] text-sm font-medium">
+              {isOwner ? "Owner" : "Member"}
+            </span>
+          )}
+        </div>
+
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-sm font-medium text-[#666666] mb-3">Owners</h3>
+            <div className="flex flex-wrap gap-3">
+              {typedMarketplace.owners.map((owner) => (
+                <div
+                  key={owner.id}
+                  className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg"
+                >
+                  <div className="w-8 h-8 bg-[#453E3E] rounded-full flex items-center justify-center">
+                    <span className="text-white text-sm font-medium">
+                      {owner.id.slice(0, 2).toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-[#453E3E]">
+                      {owner.id.split("_")[1] || "User"}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+
+          {typedMarketplace.members.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-[#666666] mb-3">
+                Members
+              </h3>
+              <div className="flex flex-wrap gap-3">
+                {typedMarketplace.members.map((member) => (
+                  <div
+                    key={member.id}
+                    className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg"
+                  >
+                    <div className="w-8 h-8 bg-[#666666] rounded-full flex items-center justify-center">
+                      <span className="text-white text-sm font-medium">
+                        {member.id.slice(0, 2).toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-[#453E3E]">
+                        {member.id.split("_")[1] || "User"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

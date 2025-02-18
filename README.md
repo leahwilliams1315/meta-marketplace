@@ -1,80 +1,53 @@
-# Guide: Building MetaMarket PoC with Next.js and Clerk
+# MetaMarketplace
 
-## Overview
+A platform for creating and managing artisan marketplaces, built with Next.js 14, Prisma, and Stripe Connect.
 
-We will create a basic proof of concept for a marketplace-of-marketplaces platform using Clerk for authentication and user management. This PoC will demonstrate:
+## Core Features
 
-1. User authentication with Clerk
-2. Marketplace creation
-3. Stripe Connect integration
-4. Basic product management
+- **Authentication**: Clerk-based authentication system
+- **Marketplace Management**: Create and manage marketplaces with owner/member roles
+- **Product Management**: List and manage products within marketplaces
+- **Payments**: Stripe Connect integration for marketplace payments
 
-## Prerequisites
+## Technical Stack
 
-- Next.js app created with create-next-app
-- Clerk account and project set up
-- Stripe account with Connect enabled
-- Environment variables set up:
-  ```
-  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_clerk...
-  CLERK_SECRET_KEY=sk_clerk...
-  NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-  NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-  NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
-  NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/onboarding
-  STRIPE_SECRET_KEY=sk_test_...
-  STRIPE_PUBLISHABLE_KEY=pk_test_...
-  STRIPE_WEBHOOK_SECRET=whsec_...
-  DATABASE_URL=...
-  ```
+- **Framework**: Next.js 14 with App Router
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: Clerk
+- **Payments**: Stripe Connect (Standard accounts)
+- **Styling**: Tailwind CSS with shadcn/ui components
+- **State Management**: React hooks with Server Components
+- **Image Handling**: Next.js Image component with optimization
 
-## Step 1: Initial Setup
+## Key Components
 
-1. Install dependencies:
-
-```bash
-npm install @clerk/nextjs @prisma/client stripe
-npm install -D prisma
-```
-
-2. Initialize Prisma:
-
-```bash
-npx prisma init
-```
-
-3. Create database schema at `prisma/schema.prisma`:
+### Database Schema (Prisma)
 
 ```prisma
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
-}
-
 model User {
-  id            String        @id
+  id              String        @id
   stripeAccountId String?
-  marketplaces  Marketplace[] @relation("MarketplaceOwners")
-  memberOf      Marketplace[] @relation("MarketplaceMembers")
-  products      Product[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  role            UserRole     @default(CUSTOMER)
+  city            String?
+  marketplaces    Marketplace[] @relation("MarketplaceOwners")
+  memberOf        Marketplace[] @relation("MarketplaceMembers")
+  products        Product[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
 
 model Marketplace {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   name        String
-  slug        String    @unique
+  slug        String     @unique
   description String?
-  owners      User[]    @relation("MarketplaceOwners")
-  members     User[]    @relation("MarketplaceMembers")
+  city        String?
+  type        String?
+  owners      User[]     @relation("MarketplaceOwners")
+  members     User[]     @relation("MarketplaceMembers")
   products    Product[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 model Product {
@@ -82,7 +55,7 @@ model Product {
   name          String
   description   String
   price         Int
-  images        String[]
+  images        Json
   marketplace   Marketplace @relation(fields: [marketplaceId], references: [id])
   marketplaceId String
   seller        User        @relation(fields: [sellerId], references: [id])
@@ -92,431 +65,175 @@ model Product {
 }
 ```
 
-## Step 2: Clerk Setup
+### Stripe Integration
 
-1. Create middleware file at `middleware.ts`:
+- Uses Standard Connect accounts for marketplace owners
+- Implemented in `/api/stripe/connect` and `/api/stripe/disconnect` routes
+- Dashboard insights available at `/dashboard/stripe`
+- Stripe account management through `StripeAccountCard` component
 
-```typescript
-import { authMiddleware } from "@clerk/nextjs";
+### Key Routes
 
-export default authMiddleware({
-  publicRoutes: ["/", "/api/webhooks/clerk", "/api/webhooks/stripe"],
-});
+- `/`: Home page
+- `/marketplaces`: Browse all marketplaces
+- `/marketplace/[slug]`: Individual marketplace view
+- `/dashboard`: User dashboard
+- `/dashboard/stripe`: Stripe insights
+- `/create-marketplace`: Marketplace creation
 
-export const config = {
-  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
-};
+### Important Components
+
+#### StripeAccountCard
+
+- Handles Stripe account connection/disconnection
+- Shows account insights (revenue, transactions, etc.)
+- Located in `src/components/StripeAccountCard.tsx`
+
+#### Marketplace Page
+
+- Displays marketplace details, products, and team members
+- Handles role-based access (owner/member/visitor)
+- Located in `src/app/marketplace/[slug]/page.tsx`
+
+### API Routes
+
+#### Stripe Related
+
+- `/api/stripe/connect`: Initiates Stripe Connect onboarding
+- `/api/stripe/disconnect`: Disconnects Stripe account
+- `/api/stripe/insights-summary`: Fetches account insights
+
+#### Marketplace Related
+
+- `/api/marketplaces`: CRUD operations for marketplaces
+- `/api/products`: Product management
+
+## Environment Variables
+
+Required environment variables:
+
+```env
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgres://..."
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_..."
+CLERK_SECRET_KEY="sk_..."
+STRIPE_SECRET_KEY="sk_..."
 ```
 
-2. Update `app/layout.tsx`:
-
-```typescript
-import { ClerkProvider } from "@clerk/nextjs";
-import { Inter } from "next/font/google";
-
-const inter = Inter({ subsets: ["latin"] });
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en">
-      <ClerkProvider>
-        <body className={inter.className}>{children}</body>
-      </ClerkProvider>
-    </html>
-  );
-}
-```
-
-## Step 3: Database Synchronization
-
-1. Create Clerk webhook handler at `app/api/webhooks/clerk/route.ts`:
-
-```typescript
-import { WebhookEvent } from "@clerk/nextjs/server";
-import { headers } from "next/headers";
-import { Webhook } from "svix";
-import prisma from "@/lib/prisma";
-
-export async function POST(req: Request) {
-  const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
-  if (!WEBHOOK_SECRET) {
-    throw new Error(
-      "Please add CLERK_WEBHOOK_SECRET from Clerk Dashboard to .env"
-    );
-  }
-
-  const headerPayload = headers();
-  const svix_id = headerPayload.get("svix-id");
-  const svix_timestamp = headerPayload.get("svix-timestamp");
-  const svix_signature = headerPayload.get("svix-signature");
-
-  if (!svix_id || !svix_timestamp || !svix_signature) {
-    return new Response("Error occurred -- no svix headers", {
-      status: 400,
-    });
-  }
-
-  const payload = await req.json();
-  const body = JSON.stringify(payload);
-
-  const wh = new Webhook(WEBHOOK_SECRET);
-  let evt: WebhookEvent;
-
-  try {
-    evt = wh.verify(body, {
-      "svix-id": svix_id,
-      "svix-timestamp": svix_timestamp,
-      "svix-signature": svix_signature,
-    }) as WebhookEvent;
-  } catch (err) {
-    return new Response("Error occurred", {
-      status: 400,
-    });
-  }
-
-  const { id } = evt.data;
-  const eventType = evt.type;
-
-  if (eventType === "user.created") {
-    await prisma.user.create({
-      data: {
-        id: id,
-      },
-    });
-  }
-
-  if (eventType === "user.deleted") {
-    await prisma.user.delete({
-      where: { id },
-    });
-  }
-
-  return new Response("", { status: 200 });
-}
-```
-
-## Step 4: Stripe Integration
-
-1. Create Stripe utility file at `lib/stripe.ts`:
-
-```typescript
-import Stripe from "stripe";
-import prisma from "./prisma";
-
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2023-10-16",
-});
-
-export async function createConnectAccount(userId: string, email: string) {
-  const account = await stripe.accounts.create({
-    type: "express",
-    country: "CA",
-    email,
-    capabilities: {
-      card_payments: { requested: true },
-      transfers: { requested: true },
-    },
-  });
-
-  await prisma.user.update({
-    where: { id: userId },
-    data: { stripeAccountId: account.id },
-  });
-
-  const accountLink = await stripe.accountLinks.create({
-    account: account.id,
-    refresh_url: `${process.env.NEXT_PUBLIC_URL}/onboarding/refresh`,
-    return_url: `${process.env.NEXT_PUBLIC_URL}/onboarding/complete`,
-    type: "account_onboarding",
-  });
-
-  return accountLink.url;
-}
-```
-
-2. Create Stripe Connect endpoint at `app/api/stripe/connect/route.ts`:
-
-```typescript
-import { auth } from "@clerk/nextjs";
-import { NextResponse } from "next/server";
-import { createConnectAccount } from "@/lib/stripe";
-
-export async function POST() {
-  const { userId } = auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const url = await createConnectAccount(userId, "user@example.com"); // Get email from Clerk
-    return NextResponse.json({ url });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to create Stripe account" },
-      { status: 500 }
-    );
-  }
-}
-```
-
-## Step 5: Marketplace Creation
-
-1. Create marketplace API at `app/api/marketplaces/route.ts`:
-
-```typescript
-import { auth } from "@clerk/nextjs";
-import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-
-export async function POST(req: Request) {
-  const { userId } = auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { name, description } = await req.json();
-  const slug = name.toLowerCase().replace(/\s+/g, "-");
-
-  const marketplace = await prisma.marketplace.create({
-    data: {
-      name,
-      description,
-      slug,
-      owners: {
-        connect: { id: userId },
-      },
-      members: {
-        connect: { id: userId },
-      },
-    },
-  });
-
-  return NextResponse.json(marketplace);
-}
-
-export async function GET() {
-  const { userId } = auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const marketplaces = await prisma.marketplace.findMany({
-    include: {
-      owners: true,
-      _count: {
-        select: {
-          products: true,
-          members: true,
-        },
-      },
-    },
-  });
-
-  return NextResponse.json(marketplaces);
-}
-```
-
-## Step 6: Frontend Components
-
-1. Create user profile component at `components/UserProfile.tsx`:
-
-```typescript
-"use client";
-
-import { UserProfile } from "@clerk/nextjs";
-
-export default function UserProfilePage() {
-  return (
-    <div className="max-w-2xl mx-auto p-6">
-      <UserProfile />
-    </div>
-  );
-}
-```
-
-2. Create marketplace creation page at `app/create-marketplace/page.tsx`:
-
-```typescript
-"use client";
-
-import { useAuth } from "@clerk/nextjs";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-
-export default function CreateMarketplace() {
-  const { userId } = useAuth();
-  const router = useRouter();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userId) return;
-
-    const response = await fetch("/api/marketplaces", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, description }),
-    });
-
-    if (response.ok) {
-      const marketplace = await response.json();
-      router.push(`/marketplace/${marketplace.slug}`);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Create Marketplace</h1>
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full border rounded-md p-2"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Description</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full border rounded-md p-2"
-            rows={4}
-          />
-        </div>
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600"
-        >
-          Create Marketplace
-        </button>
-      </div>
-    </form>
-  );
-}
-```
-
-## Step 7: Protected Routes
-
-1. Create protected marketplace page at `app/marketplace/[slug]/page.tsx`:
-
-```typescript
-import { auth } from "@clerk/nextjs";
-import { redirect } from "next/navigation";
-import prisma from "@/lib/prisma";
-
-export default async function MarketplacePage({
-  params: { slug },
-}: {
-  params: { slug: string };
-}) {
-  const { userId } = auth();
-  if (!userId) {
-    redirect("/sign-in");
-  }
-
-  const marketplace = await prisma.marketplace.findUnique({
-    where: { slug },
-    include: {
-      products: {
-        include: {
-          seller: true,
-        },
-      },
-      owners: true,
-      members: true,
-    },
-  });
-
-  if (!marketplace) {
-    return <div>Marketplace not found</div>;
-  }
-
-  return (
-    <div className="max-w-6xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">{marketplace.name}</h1>
-      <p className="text-gray-600 mb-8">{marketplace.description}</p>
-
-      {/* Add product grid and member list components */}
-    </div>
-  );
-}
-```
-
-## Step 8: Sign In/Sign Up Pages
-
-1. Create sign-in page at `app/sign-in/[[...sign-in]]/page.tsx`:
-
-```typescript
-import { SignIn } from "@clerk/nextjs";
-
-export default function SignInPage() {
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <SignIn />
-    </div>
-  );
-}
-```
-
-2. Create sign-up page at `app/sign-up/[[...sign-up]]/page.tsx`:
-
-```typescript
-import { SignUp } from "@clerk/nextjs";
-
-export default function SignUpPage() {
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <SignUp />
-    </div>
-  );
-}
-```
-
-## Testing the PoC
-
-1. Set up Clerk webhooks:
-
-   - Go to Clerk Dashboard > Webhooks
-   - Add endpoint: `your-domain/api/webhooks/clerk`
-   - Select events: `user.created`, `user.deleted`
-
-2. Start the application:
-
-```bash
-npm run dev
-```
-
-3. Test the flow:
-   - Sign up new user
-   - Complete Stripe Connect onboarding
-   - Create marketplace
-   - Add products
-   - View marketplace
-
-## Next Steps
-
-Consider adding:
-
-1. Product search and filtering
-2. Marketplace customization
-3. Member management
-4. Shopping cart
-5. Order processing
-6. Analytics dashboard
-
-Remember to:
-
-- Add proper error handling
-- Implement loading states
-- Add form validation
-- Set up proper webhook handling for both Clerk and Stripe events
-- Implement proper security measures and rate limiting
+## Current State
+
+- Basic marketplace creation and management implemented
+- Stripe Connect integration working with insights
+- User roles and permissions established
+- Product management basics implemented
+- Responsive UI with shadcn/ui components
+
+## TODO/Next Steps
+
+- Implement product purchase flow
+- Add marketplace search/filtering
+- Enhance user profiles
+- Add marketplace analytics
+- Implement notifications system
+
+## Development Notes
+
+- Using functional patterns throughout
+- Server Components where possible
+- Client Components for interactive features
+- Stripe Connect Standard for maximum flexibility
+- Role-based access control implemented at route level
+
+## Style Guide
+
+- Using a consistent color scheme:
+  - Primary: #453E3E
+  - Secondary: #666666
+  - Accent: #F97316
+  - Background: #faf9f7
+- Consistent border radius and shadows
+- Mobile-first responsive design
+- shadcn/ui components for consistency
+
+## Development & Deployment
+
+This project uses pnpm for managing dependencies and running scripts. Use the following commands:
+
+- Install dependencies: pnpm install
+- Start the development server: pnpm dev
+- Build for production: pnpm build
+- Start the production server: pnpm start
+
+## Testing & Linting
+
+Ensure code quality by running tests and linting. You can use the following commands (assuming these scripts are configured):
+
+- Run tests: pnpm test
+- Run linter: pnpm lint
+
+## Contributing
+
+Contributions are welcome! Please follow these guidelines:
+
+- Use functional code patterns throughout the codebase
+- Adhere to the established coding style and design principles
+- Ensure new code passes linting and testing before submitting a pull request
+- Use feature branches for new features or bug fixes
+- Provide clear commit messages and documentation for any significant changes
+
+## Troubleshooting & FAQ
+
+- If you encounter issues with Stripe onboarding or API calls, double-check your environment variables for correct configuration.
+- For problems with Clerk authentication, verify your Clerk configuration and webhook settings.
+- Ensure your database (PostgreSQL) connection details in the .env file are correct.
+- Refer to the official documentation for Next.js, Prisma, Stripe, and Clerk for further guidance.
+
+## Folder Structure
+
+Here's an overview of the main directories and files in the project:
+
+- **/src**
+  - **/app**: Contains Next.js pages and API routes.
+    - **/dashboard**: User dashboard pages, including Stripe insights.
+    - **/marketplace**: Pages for individual marketplace views.
+    - **/api**: API endpoints for Stripe, marketplaces, products, etc.
+  - **/components**: Reusable UI components such as the `StripeAccountCard`, `NavBar`, and other shared components.
+  - **/lib**: Shared libraries and utilities, e.g., `prisma.ts` for database access, `stripe.ts` for Stripe integration.
+- **/prisma**: Contains the Prisma schema and migration files (e.g., `schema.prisma`).
+- **.env**: Environment variable definitions (not in version control).
+- **README.md**: Project documentation and reference.
+
+This structure supports a modular and scalable development approach.
+
+## Additional Resources
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Prisma Documentation](https://www.prisma.io/docs)
+- [Stripe Documentation](https://stripe.com/docs)
+- [Clerk Documentation](https://clerk.dev/docs)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+- [shadcn/ui](https://ui.shadcn.com/)
+
+## License
+
+This project is licensed under the MIT License.
+
+## Vision & Goals
+
+MetaMarketplace is designed to be much more than a simple ecommerce platform. Our vision is to empower artisans, creators, and local communities by providing a robust, community-driven marketplace that emphasizes user control and professional independence. Key objectives include:
+
+- **Community-Driven Features:**
+
+  - Facilitate interactive message boards and discussions organized by tags (e.g., "Toronto", "Pottery") to foster local and thematic communities.
+  - Enable intersections of tags, allowing users to connect over specific, niche interests.
+
+- **Empowering Merchants:**
+
+  - Allow merchants to create their own standardized merchant pages, effectively giving them the tools to operate as independent marketplaces.
+  - Integrate advanced CMS-level controls using systems like Strapi or Sanity, enabling merchants to manage content (e.g., blogs, product layouts) and customize their online presence.
+  - Provide support for advanced marketing strategies, including integrations with social media bots to promote their products and reach a wider audience.
+
+- **Long-Term Integration & Expansion:**
+  - Eventually merge MetaMarketplace with a larger ecosystem focused on translation and transformation of JSON data, enhancing support for merchants.
+  - Draw inspiration from platforms like Etsy, Amazon, and Facebook Marketplace while remaining committed to providing users with maximum control and minimal interference.
+  - Support local community efforts by connecting store owners with artisans, streamlining the process of sourcing, collaboration, and localized marketing.

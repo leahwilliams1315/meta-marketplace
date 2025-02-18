@@ -73,15 +73,26 @@ export default function CreateProductPage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">
-        {productId ? "Edit Product" : "Create Product"}
-      </h1>
-      <CreateProductForm
-        marketplaces={marketplaces}
-        initialData={initialData}
-        onSubmitForm={handleSubmit}
-      />
+    <div className="min-h-screen bg-[#faf9f7] pt-24">
+      <div className="container mx-auto px-4">
+        <div className="max-w-5xl mx-auto">
+          <h1 className="font-display text-3xl md:text-4xl font-bold mb-3 text-[#453E3E]">
+            {productId ? "Edit Product" : "Create Product"}
+          </h1>
+          <p className="text-[#666666] mb-12">
+            {productId
+              ? "Update your product details and sync with Stripe."
+              : "Add a new product to your marketplace."}
+          </p>
+          <div className="bg-white rounded-lg border border-[#E5E5E5] p-8">
+            <CreateProductForm
+              marketplaces={marketplaces}
+              initialData={initialData}
+              onSubmitForm={handleSubmit}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

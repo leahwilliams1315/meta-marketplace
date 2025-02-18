@@ -79,15 +79,22 @@ export const CreateProductForm = ({
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      {error && <div className="text-destructive">{error}</div>}
+    <form onSubmit={onSubmit} className="space-y-6">
+      {error && (
+        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-md text-sm">
+          {error}
+        </div>
+      )}
       <div>
-        <label className="block mb-1 font-medium">Marketplace</label>
+        <label className="block mb-2 text-sm font-medium text-[#453E3E]">
+          Marketplace
+        </label>
         <select
-          className="input w-full"
+          className="w-full px-3 py-2 bg-white border border-[#E5E5E5] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
           value={selectedMarketplaceId}
           onChange={(e) => setSelectedMarketplaceId(e.target.value)}
           required
+          disabled={loading}
         >
           {marketplaces.map((m) => (
             <option key={m.id} value={m.id}>
@@ -97,14 +104,17 @@ export const CreateProductForm = ({
         </select>
       </div>
       <div>
-        <label className="block mb-1 font-medium">Name</label>
+        <label className="block mb-2 text-sm font-medium text-[#453E3E]">
+          Name
+        </label>
         <input
-          className="input w-full"
+          className="w-full px-3 py-2 bg-white border border-[#E5E5E5] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
           disabled={loading}
+          placeholder="Enter product name"
         />
       </div>
       <div>

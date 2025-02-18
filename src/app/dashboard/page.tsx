@@ -8,6 +8,7 @@ import { ProductSyncBadge } from "@/components/ProductSyncBadge";
 import { SyncAllProductsButton } from "@/components/SyncAllProductsButton";
 import { stripe } from "@/lib/stripe";
 import { Product } from "@prisma/client";
+import { ImageCarousel } from "@/components/ImageCarousel";
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -160,49 +161,63 @@ export default async function DashboardPage() {
                       isSynced: p.isSynced,
                     }))}
                   />
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {enhancedProducts.map((product) => (
                       <div
                         key={product.id}
-                        className="bg-white rounded-lg border border-[#E5E5E5] p-6 hover:shadow-lg transition-shadow duration-200 relative group"
+                        className="bg-white rounded-lg border border-[#E5E5E5] overflow-hidden hover:shadow-lg transition-shadow duration-200 relative group"
                       >
-                        <div className="absolute top-4 right-4">
-                          <ProductSyncBadge
-                            productId={product.id}
-                            name={product.name}
-                            description={product.description}
-                            isSynced={!!product.isSynced}
-                          />
+                        <div className="relative">
+                          <div className="aspect-square rounded-t-lg overflow-hidden">
+                            <ImageCarousel
+                              images={
+                                Array.isArray(product.images)
+                                  ? (product.images as string[])
+                                  : []
+                              }
+                            />
+                          </div>
+                          <div className="absolute top-2 right-2 z-10">
+                            <ProductSyncBadge
+                              productId={product.id}
+                              name={product.name}
+                              description={product.description}
+                              isSynced={!!product.isSynced}
+                              images={[]}
+                            />
+                          </div>
                         </div>
-                        <h3 className="font-medium text-[#453E3E] mb-2">
-                          {product.name}
-                        </h3>
-                        <p className="text-[#666666] text-sm mb-4 line-clamp-2">
-                          {product.description}
-                        </p>
-                        <p className="font-bold text-[#453E3E] text-lg">
-                          ${(product.price / 100).toFixed(2)}
-                        </p>
-                        <div className="mt-4 pt-4 border-t border-[#E5E5E5] flex items-center justify-between">
-                          <Link
-                            href={`/create-product?productId=${product.id}`}
-                            className="inline-flex items-center text-[#F97316] text-sm font-medium hover:text-[#F97316]/90 transition-colors"
-                          >
-                            <svg
-                              className="w-4 h-4 mr-1"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                        <div className="p-3">
+                          <h3 className="font-medium text-[#453E3E] text-sm mb-1">
+                            {product.name}
+                          </h3>
+                          <p className="text-[#666666] text-xs mb-2 line-clamp-2">
+                            {product.description}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <p className="font-bold text-[#453E3E] text-base">
+                              ${(product.price / 100).toFixed(2)}
+                            </p>
+                            <Link
+                              href={`/create-product?productId=${product.id}`}
+                              className="inline-flex items-center text-[#F97316] text-xs font-medium hover:text-[#F97316]/90 transition-colors"
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                            Edit
-                          </Link>
+                              <svg
+                                className="w-3.5 h-3.5 mr-1"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                              </svg>
+                              Edit
+                            </Link>
+                          </div>
                         </div>
                       </div>
                     ))}

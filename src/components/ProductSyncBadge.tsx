@@ -8,6 +8,7 @@ interface ProductSyncBadgeProps {
   name: string;
   description: string;
   isSynced: boolean;
+  images: string[];
 }
 
 export function ProductSyncBadge({
@@ -45,17 +46,13 @@ export function ProductSyncBadge({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-0.5 bg-white/90 backdrop-blur-sm rounded-full px-1 py-0.5 shadow-sm hover:bg-white/95 transition-colors">
       <div
-        className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1
-          ${
-            isSynced
-              ? "bg-green-50 text-green-700"
-              : "bg-yellow-50 text-yellow-700"
-          }`}
+        className={`text-[9px] font-medium flex items-center gap-0.5
+          ${isSynced ? "text-green-700" : "text-yellow-700"}`}
       >
         <span
-          className={`w-1.5 h-1.5 rounded-full ${
+          className={`w-1 h-1 rounded-full ${
             isSynced ? "bg-green-500" : "bg-yellow-500"
           }`}
         />
@@ -65,11 +62,11 @@ export function ProductSyncBadge({
         <button
           onClick={handleSync}
           disabled={loading}
-          className="text-xs text-gray-500 hover:text-[#F97316] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="text-[9px] text-gray-500 hover:text-[#F97316] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
             <svg
-              className="animate-spin h-4 w-4"
+              className="animate-spin h-2 w-2"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -90,7 +87,7 @@ export function ProductSyncBadge({
             </svg>
           ) : (
             <svg
-              className="w-4 h-4"
+              className="w-2 h-2"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -106,7 +103,7 @@ export function ProductSyncBadge({
         </button>
       )}
       {error && (
-        <div className="absolute top-full left-0 mt-1 text-xs text-red-500 bg-white shadow-lg rounded-md p-2 z-10">
+        <div className="absolute top-full right-0 mt-1 text-[9px] text-red-500 bg-white/95 shadow-sm rounded-md px-1 py-0.5 z-10 whitespace-nowrap backdrop-blur-sm">
           {error}
         </div>
       )}

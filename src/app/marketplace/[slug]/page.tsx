@@ -23,10 +23,11 @@ type ClerkUserData = {
 };
 
 export default async function MarketplacePage({
-  params: { slug },
+  params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
+  const { slug } = await params;
   const { userId } = await auth();
   if (!userId) {
     redirect("/sign-in");

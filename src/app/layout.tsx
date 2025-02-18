@@ -16,8 +16,10 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const FixedClerkProvider: React.FC<React.PropsWithChildren<object>> =
+    ClerkProvider as unknown as React.FC<React.PropsWithChildren<object>>;
   return (
-    <ClerkProvider>
+    <FixedClerkProvider>
       <html lang="en" className="scroll-smooth">
         <body
           className={`${inter.className} min-h-screen flex flex-col bg-background text-foreground font-body`}
@@ -30,6 +32,6 @@ export default function RootLayout({
           </CartProvider>
         </body>
       </html>
-    </ClerkProvider>
+    </FixedClerkProvider>
   );
 }

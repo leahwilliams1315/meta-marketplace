@@ -12,6 +12,22 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+const FixedSignedIn: React.FC<React.PropsWithChildren<object>> =
+  SignedIn as unknown as React.FC<React.PropsWithChildren<object>>;
+const FixedSignedOut: React.FC<React.PropsWithChildren<object>> =
+  SignedOut as unknown as React.FC<React.PropsWithChildren<object>>;
+const FixedSignInButton: React.FC<React.PropsWithChildren<{ mode: "modal" }>> =
+  SignInButton as unknown as React.FC<
+    React.PropsWithChildren<{ mode: "modal" }>
+  >;
+const FixedUserButton: React.FC<{
+  afterSignOutUrl: string;
+  appearance: object;
+}> = UserButton as unknown as React.FC<{
+  afterSignOutUrl: string;
+  appearance: object;
+}>;
+
 export const NavBar = () => {
   return (
     <div className="fixed top-0 left-0 right-0 h-24 z-50 px-4">
@@ -56,14 +72,14 @@ export const NavBar = () => {
                     >
                       Dashboard
                     </Link>
-                    <SignedIn>
+                    <FixedSignedIn>
                       <Link
                         href="/create-marketplace"
                         className="text-sm font-medium text-[#666666] hover:text-[#453E3E] transition-colors px-3 py-2 rounded-md hover:bg-[#faf9f7]"
                       >
                         Create Marketplace
                       </Link>
-                    </SignedIn>
+                    </FixedSignedIn>
                   </div>
                 </div>
               </SheetContent>
@@ -91,25 +107,25 @@ export const NavBar = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <SignedOut>
-            <SignInButton mode="modal">
+          <FixedSignedOut>
+            <FixedSignInButton mode="modal">
               <Button
                 variant="ghost"
                 className="text-sm text-[#666666] hover:text-[#453E3E] hover:bg-transparent"
               >
                 Sign In
               </Button>
-            </SignInButton>
-            <SignInButton mode="modal">
+            </FixedSignInButton>
+            <FixedSignInButton mode="modal">
               <Button
                 variant="ghost"
                 className="rounded-full bg-[#453E3E] text-white hover:bg-[#453E3E]/90 px-6"
               >
                 Get Started
               </Button>
-            </SignInButton>
-          </SignedOut>
-          <SignedIn>
+            </FixedSignInButton>
+          </FixedSignedOut>
+          <FixedSignedIn>
             <Link href="/create-marketplace" className="hidden md:block">
               <Button
                 variant="ghost"
@@ -119,7 +135,7 @@ export const NavBar = () => {
               </Button>
             </Link>
             <CartDropdown />
-            <UserButton
+            <FixedUserButton
               afterSignOutUrl="/"
               appearance={{
                 elements: {
@@ -128,7 +144,7 @@ export const NavBar = () => {
                 },
               }}
             />
-          </SignedIn>
+          </FixedSignedIn>
         </div>
       </nav>
     </div>

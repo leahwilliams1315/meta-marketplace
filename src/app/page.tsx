@@ -1,13 +1,48 @@
 import Link from "next/link";
+import { FeatureSteps } from "@/components/blocks/feature-section";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-background flex flex-col justify-center">
-      <div className="max-w-5xl mx-auto px-4 py-16 sm:py-24">
-        {/* Hero Section */}
-        <div className="text-center mb-24">
-          <h1 className="text-5xl sm:text-6xl font-display font-bold mb-8 tracking-tight">
-            Welcome to MetaMarket
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Hero Section with Dashboard Preview */}
+      <div className="w-full max-w-7xl mx-auto pt-24">
+        <FeatureSteps
+          title="Build Your Own Marketplace"
+          className="font-display text-[#453E3E]"
+          features={[
+            {
+              step: "Create Your Space",
+              content:
+                "Set up your marketplace in minutes with our intuitive creation flow.",
+              image: "/create.png",
+            },
+            {
+              step: "Manage Your Business",
+              content:
+                "Track revenue, view insights, and manage your marketplace all in one place.",
+              image: "/dashboard.png",
+            },
+            {
+              step: "Sell Your Products",
+              content:
+                "List and manage your products with a beautiful, conversion-optimized interface.",
+              image: "/browse.png",
+            },
+            {
+              step: "Secure Checkout",
+              content:
+                "Give your customers a seamless buying experience with integrated Stripe payments.",
+              image: "/checkout.png",
+            },
+          ]}
+        />
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 py-16">
+        {/* Value Proposition */}
+        <div className="text-center mb-32">
+          <h1 className="text-4xl sm:text-5xl font-display font-bold mb-8 tracking-tight text-[#453E3E]">
+            Create, Manage, Thrive
           </h1>
           <p className="text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
             Create and manage your own marketplace, or join existing ones.

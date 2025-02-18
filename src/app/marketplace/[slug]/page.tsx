@@ -1,8 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
+import { clerkClient } from "@clerk/nextjs/server";
+import type { User as ClerkUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
+import { ProductCard } from "@/components/ProductCard";
 import type { Marketplace, Product, User } from "@prisma/client";
-import Image from "next/image";
 
 type ProductWithSeller = Product & {
   seller: User;
@@ -13,6 +15,11 @@ type MarketplaceWithRelations = Marketplace & {
   products: ProductWithSeller[];
   owners: User[];
   members: User[];
+};
+
+type ClerkUserData = {
+  name: string;
+  imageUrl: string;
 };
 
 export default async function MarketplacePage({
@@ -50,49 +57,55 @@ export default async function MarketplacePage({
     );
   }
 
+  // Fetch Clerk user information for all sellers
+  const sellerIds = [
+    ...new Set(marketplace.products.map((product) => product.sellerId)),
+  ];
+  const clerk = await clerkClient();
+  const clerkUsers = await Promise.all(
+    sellerIds.map((id) => clerk.users.getUser(id))
+  );
+
+  // Create a map of Clerk user data
+  const userMap = new Map<string, ClerkUserData>(
+    clerkUsers.map((user: ClerkUser) => [
+      user.id,
+      {
+        name: `${user.firstName} ${user.lastName}`.trim() || "Anonymous",
+        imageUrl: user.imageUrl,
+      },
+    ])
+  );
+
   const typedMarketplace = marketplace as MarketplaceWithRelations;
   const isOwner = typedMarketplace.owners.some((owner) => owner.id === userId);
   const isMember = typedMarketplace.members.some(
     (member) => member.id === userId
   );
 
+  // Enhance products with Clerk user data
+  const enhancedProducts = typedMarketplace.products.map((product) => {
+    const clerkUserData = userMap.get(product.sellerId);
+    return {
+      ...product,
+      seller: {
+        ...product.seller,
+        name: clerkUserData?.name || "Anonymous",
+        imageUrl: clerkUserData?.imageUrl,
+      },
+    };
+  });
+
   return (
-    <div className="py-12">
+    <div className="py-24">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">{typedMarketplace.name}</h1>
         <p className="text-muted-foreground">{typedMarketplace.description}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {typedMarketplace.products.map((product) => (
-          <div
-            key={product.id}
-            className="card hover:shadow-md transition-shadow"
-          >
-            {Array.isArray(product.images) && product.images[0] && (
-              <div className="aspect-video mb-4 rounded-lg overflow-hidden relative">
-                <Image
-                  src={product.images[0]}
-                  alt={product.name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                />
-              </div>
-            )}
-            <h3 className="font-semibold mb-2">{product.name}</h3>
-            <p className="text-muted-foreground text-sm mb-4">
-              {product.description}
-            </p>
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-bold">
-                ${(product.price / 100).toFixed(2)}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                by {product.seller.id}
-              </span>
-            </div>
-          </div>
+        {enhancedProducts.map((product) => (
+          <ProductCard key={product.id} product={product} />
         ))}
       </div>
 

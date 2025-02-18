@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
         hostname: "stainsbystudios.com",
         pathname: "/cdn/shop/files/**",
       },
+      {
+        protocol: "https",
+        hostname: "img.clerk.com",
+        pathname: "/**",
+      },
     ],
   },
 };

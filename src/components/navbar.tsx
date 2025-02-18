@@ -4,6 +4,7 @@ import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
+import { CartDropdown } from "@/components/CartDropdown";
 import {
   Sheet,
   SheetContent,
@@ -117,6 +118,7 @@ export const NavBar = () => {
                 Create Marketplace
               </Button>
             </Link>
+            <CartDropdown />
             <UserButton
               afterSignOutUrl="/"
               appearance={{

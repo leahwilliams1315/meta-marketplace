@@ -1,11 +1,14 @@
-import { ClerkProvider } from "@clerk/nextjs";
-import { NavBar } from "@/components/navbar";
 import "./globals.css";
+import { ClerkProvider } from "@clerk/nextjs";
+import { CartProvider } from "@/lib/cart";
+import { NavBar } from "@/components/navbar";
+import { Inter } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
   title: "MetaMarket",
-  description:
-    "A meta marketplace for artisans to connect, collaborate, and create.",
+  description: "Your Marketplace for Unique Items",
 };
 
 export default function RootLayout({
@@ -14,13 +17,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="scroll-smooth">
-      <ClerkProvider>
-        <body className="min-h-screen flex flex-col bg-background text-foreground font-body">
-          <NavBar />
-          <main className="flex-1 container mx-auto px-6 py-8">{children}</main>
+    <ClerkProvider>
+      <html lang="en" className="scroll-smooth">
+        <body
+          className={`${inter.className} min-h-screen flex flex-col bg-background text-foreground font-body`}
+        >
+          <CartProvider>
+            <NavBar />
+            <main className="flex-1 container mx-auto px-6 py-8">
+              {children}
+            </main>
+          </CartProvider>
         </body>
-      </ClerkProvider>
-    </html>
+      </html>
+    </ClerkProvider>
   );
 }

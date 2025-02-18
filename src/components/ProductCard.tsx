@@ -88,7 +88,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <Button
           variant="default"
           onClick={handleAddToCart}
-          className="flex-1 flex items-center justify-center gap-2"
+          className="flex-1 flex items-center justify-center gap-2 bg-[#453E3E] hover:bg-[#2A2424] text-white"
         >
           <ShoppingCart className="h-4 w-4" />
           Add to Cart

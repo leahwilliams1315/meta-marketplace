@@ -19,6 +19,26 @@ export function CartDropdown() {
     0
   );
 
+  const handleCheckout = async () => {
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ items: state.items }),
+      });
+
+      const data = await response.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+    }
+  };
+
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -39,8 +59,8 @@ export function CartDropdown() {
         side="right"
         className="w-full sm:w-[380px] p-0 bg-white/95 backdrop-blur-md border-[#E5E5E5]"
       >
-        <div className="h-24 flex items-center justify-between px-6 border-b border-[#E5E5E5]">
-          <SheetTitle className="font-display text-xl font-bold tracking-tight text-[#453E3E]">
+        <div className="h-24 flex items-center px-6 border-b border-[#E5E5E5]">
+          <SheetTitle className="flex-1 font-display text-xl font-bold tracking-tight text-[#453E3E]">
             Shopping Cart
           </SheetTitle>
           {itemCount > 0 && (
@@ -48,7 +68,7 @@ export function CartDropdown() {
               variant="ghost"
               size="sm"
               onClick={() => dispatch({ type: "CLEAR_CART" })}
-              className="text-sm text-[#666666] hover:text-[#453E3E]"
+              className="text-sm text-[#666666] hover:text-[#453E3E] mr-6"
             >
               Clear All
             </Button>
@@ -145,7 +165,10 @@ export function CartDropdown() {
                 {formatPrice(total)}
               </span>
             </div>
-            <Button className="w-full bg-[#453E3E] hover:bg-[#453E3E]/90 text-white">
+            <Button
+              onClick={handleCheckout}
+              className="w-full bg-[#453E3E] hover:bg-[#2A2424] text-white"
+            >
               Checkout
             </Button>
           </div>

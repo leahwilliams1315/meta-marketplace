@@ -15,7 +15,7 @@ interface ProductProps {
   images: string[];
   seller: {
     id: string;
-    slug?: string;
+    slug: string | null;
     name?: string;
     imageUrl?: string;
   };

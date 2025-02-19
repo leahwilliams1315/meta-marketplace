@@ -144,7 +144,7 @@ export const CreateProductForm = ({
               sources: ['local', 'url', 'camera'],
               resourceType: "image",
               clientAllowedFormats: ["png", "jpeg", "jpg", "webp"],
-              maxFileSize: 10000000, // 10MB
+              maxFileSize: 20000000, // 20MB
             }}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             onUpload={(result: any) => {

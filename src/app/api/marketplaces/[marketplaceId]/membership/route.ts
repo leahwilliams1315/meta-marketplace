@@ -4,16 +4,17 @@ import prisma from "@/lib/prisma";
 
 export async function POST(
   req: Request,
-  { params }: { params: { marketplaceId: string } }
+  { params }: { params: Promise<{ marketplaceId: string }> }
 ) {
   try {
     const { userId } = await auth();
+    const { marketplaceId } = await params;
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
     const marketplace = await prisma.marketplace.findUnique({
-      where: { id: params.marketplaceId },
+      where: { id: marketplaceId },
       include: {
         members: true,
         owners: true,
@@ -34,7 +35,7 @@ export async function POST(
 
     // Add user as a member
     await prisma.marketplace.update({
-      where: { id: params.marketplaceId },
+      where: { id: marketplaceId },
       data: {
         members: {
           connect: { id: userId },
@@ -51,16 +52,18 @@ export async function POST(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { marketplaceId: string } }
+  { params }: { params: Promise<{ marketplaceId: string }> }
 ) {
   try {
     const { userId } = await auth();
+    const { marketplaceId } = await params;
+
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
     const marketplace = await prisma.marketplace.findUnique({
-      where: { id: params.marketplaceId },
+      where: { id: marketplaceId },
       include: {
         members: true,
         owners: true,
@@ -85,7 +88,7 @@ export async function DELETE(
 
     // Remove user from members
     await prisma.marketplace.update({
-      where: { id: params.marketplaceId },
+      where: { id: marketplaceId },
       data: {
         members: {
           disconnect: { id: userId },

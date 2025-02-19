@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { CldUploadWidget } from "next-cloudinary";
 
 interface Marketplace {
   id: string;
@@ -40,7 +41,7 @@ export const CreateProductForm = ({
   );
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [tempImage, setTempImage] = useState("");
+
 
   useEffect(() => {
     if (initialData) {
@@ -71,12 +72,7 @@ export const CreateProductForm = ({
     }
   }
 
-  function handleAddImage() {
-    if (tempImage) {
-      setImages([...images, tempImage]);
-      setTempImage("");
-    }
-  }
+
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
@@ -139,31 +135,65 @@ export const CreateProductForm = ({
         />
       </div>
       <div>
-        <label className="block mb-1 font-medium">Image URL</label>
-        <div className="flex gap-2">
-          <input
-            className="input flex-1"
-            type="text"
-            value={tempImage}
-            onChange={(e) => setTempImage(e.target.value)}
-            disabled={loading}
-          />
-          <button
-            type="button"
-            onClick={handleAddImage}
-            className="btn btn-secondary"
-            disabled={loading}
+        <label className="block mb-1 font-medium">Product Images</label>
+        <div className="space-y-4">
+          <CldUploadWidget
+            uploadPreset="First Test"
+            options={{
+              maxFiles: 5,
+              sources: ['local', 'url', 'camera'],
+              resourceType: "image",
+              clientAllowedFormats: ["png", "jpeg", "jpg", "webp"],
+              maxFileSize: 20000000, // 20MB
+            }}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onUpload={(result: any) => {
+              if (result.info) {
+                const imageUrl = result.info.secure_url;
+                setImages([...images, imageUrl]);
+              }
+            }}
           >
-            Add
-          </button>
+            {({ open }) => {
+              return (
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-white border border-[#E5E5E5] rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
+                  onClick={() => open()}
+                  disabled={loading}
+                >
+                  Upload Image
+                </button>
+              );
+            }}
+          </CldUploadWidget>
+
+          {images.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {images.map((img, idx) => (
+                <div key={idx} className="relative group">
+                  <img
+                    src={img}
+                    alt={`Product image ${idx + 1}`}
+                    className="w-full h-32 object-cover rounded-md"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newImages = [...images];
+                      newImages.splice(idx, 1);
+                      setImages(newImages);
+                    }}
+                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    disabled={loading}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        {images.length > 0 && (
-          <ul className="list-disc ml-5 mt-1">
-            {images.map((img, idx) => (
-              <li key={idx}>{img}</li>
-            ))}
-          </ul>
-        )}
       </div>
       <button type="submit" className="btn btn-primary" disabled={loading}>
         {loading

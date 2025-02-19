@@ -16,6 +16,7 @@ enum UserRole {
 
 model User {
   id              String        @id
+  slug            String?       @unique
   stripeAccountId String?
   role            UserRole     @default(CUSTOMER)
   city            String?       // For location-based filtering

@@ -27,6 +27,7 @@
     "next-cloudinary": "^6.16.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "slugify": "^1.6.6",
     "stripe": "^17.5.0",
     "svix": "^1.45.1",
     "tailwind-merge": "^2.6.0",

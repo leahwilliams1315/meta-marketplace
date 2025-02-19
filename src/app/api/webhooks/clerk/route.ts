@@ -2,6 +2,7 @@ import { WebhookEvent } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
 import { Webhook } from "svix";
 import prisma from "@/lib/prisma";
+import slugify from "slugify";
 
 export async function POST(req: Request) {
   console.log("Received webhook request");
@@ -54,12 +55,17 @@ export async function POST(req: Request) {
 
     // Handle the webhook
     if (eventType === "user.created") {
+      const base = "user";
+      const randomSuffix = Math.random().toString(36).substring(2, 8);
+      const generatedSlug = slugify(base, { lower: true }) + "-" + randomSuffix;
+
       await prisma.user.create({
         data: {
           id,
+          slug: generatedSlug,
         },
       });
-      console.log(`Created user ${id}`);
+      console.log(`Created user ${id} with slug ${generatedSlug}`);
     }
 
     if (eventType === "user.deleted") {

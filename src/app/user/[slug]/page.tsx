@@ -7,11 +7,13 @@ import Image from "next/image";
 export default async function UserPage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
+  const { slug } = await params;
+
   // First, find the user by their slug
   const user = await prisma.user.findUnique({
-    where: { slug: params.slug },
+    where: { slug },
   });
 
   if (!user) {

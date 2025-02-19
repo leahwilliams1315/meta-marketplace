@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { MarketplaceJoinButton } from "@/components/MarketplaceJoinButton";
 import { clerkClient } from "@clerk/nextjs/server";
 import type { User as ClerkUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
@@ -100,8 +101,27 @@ export default async function MarketplacePage({
   return (
     <div className="py-24">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">{typedMarketplace.name}</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-bold">{typedMarketplace.name}</h1>
+          {!isOwner && (
+            <div className="flex items-center gap-4">
+              <MarketplaceJoinButton
+                marketplaceId={typedMarketplace.id}
+                initialIsMember={isMember}
+                disabled={isOwner}
+              />
+            </div>
+          )}
+        </div>
         <p className="text-muted-foreground">{typedMarketplace.description}</p>
+        <div className="mt-4 flex items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            {typedMarketplace.members.length} member{typedMarketplace.members.length !== 1 ? 's' : ''}
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {enhancedProducts.length} product{enhancedProducts.length !== 1 ? 's' : ''}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

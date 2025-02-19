@@ -65,7 +65,7 @@ export function ProductCard({ product }: ProductCardProps) {
       <div className="flex flex-col gap-4">
         <span className="text-lg font-bold">{formatPrice(product.price)}</span>
         <Link
-          href={`/user/${product.seller.slug}`}
+          href={`/user/${product.seller.slug || ''}`}
           className="flex items-center gap-2 text-sm text-[#666666] hover:text-[#453E3E] transition-colors"
         >
           <div className="relative w-6 h-6 rounded-full overflow-hidden bg-[#453E3E] flex items-center justify-center text-white">

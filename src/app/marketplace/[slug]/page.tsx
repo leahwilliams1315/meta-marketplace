@@ -10,6 +10,15 @@ import type { Marketplace, Product, User } from "@prisma/client";
 type ProductWithSeller = Product & {
   seller: User;
   images: string[];
+  prices: {
+    id: string;
+    unitAmount: number;
+    currency: string;
+    isDefault: boolean;
+    paymentStyle: 'INSTANT' | 'REQUEST';
+    allocatedQuantity: number;
+    marketplaceId: string | null;
+  }[];
 };
 
 type MarketplaceWithRelations = Marketplace & {
@@ -40,6 +49,7 @@ export default async function MarketplacePage({
       products: {
         include: {
           seller: true,
+          prices: true,
         },
       },
       owners: true,
@@ -126,7 +136,13 @@ export default async function MarketplacePage({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {enhancedProducts.map((product) => (
-          <ProductCard key={product.id} product={product} />
+          <ProductCard
+            key={product.id}
+            product={{
+              ...product,
+              currentMarketplaceId: typedMarketplace.id
+            }}
+          />
         ))}
       </div>
 

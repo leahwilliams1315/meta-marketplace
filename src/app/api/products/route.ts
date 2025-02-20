@@ -41,10 +41,10 @@ export async function POST(req: Request) {
       data: {
         name,
         description,
-        price: price || 0,
         images: images || [],
         sellerId: userId,
         marketplaceId,
+        totalQuantity: 0, // Will be updated when prices are created
       },
     });
 
@@ -52,6 +52,7 @@ export async function POST(req: Request) {
     const currentUser = await prisma.user.findUnique({ where: { id: userId } });
     if (currentUser?.stripeAccountId) {
       try {
+        // Create the product in Stripe
         const stripeProduct = await stripe.products.create(
           {
             name,
@@ -59,9 +60,36 @@ export async function POST(req: Request) {
           },
           { stripeAccount: currentUser.stripeAccountId }
         );
+
+        // Create a default price in Stripe
+        const stripePrice = await stripe.prices.create(
+          {
+            unit_amount: price,
+            currency: "usd",
+            product: stripeProduct.id,
+          },
+          { stripeAccount: currentUser.stripeAccountId }
+        );
+
+        // Update product with Stripe ID and create default price
         const updatedProduct = await prisma.product.update({
           where: { id: product.id },
-          data: { stripeProductId: stripeProduct.id },
+          data: {
+            stripeProductId: stripeProduct.id,
+            prices: {
+              create: {
+                stripePriceId: stripePrice.id,
+                unitAmount: price,
+                currency: "usd",
+                isDefault: true,
+                paymentStyle: "INSTANT",
+                allocatedQuantity: 0,
+              },
+            },
+          },
+          include: {
+            prices: true,
+          },
         });
         return NextResponse.json(updatedProduct);
       } catch (stripeError) {
@@ -89,9 +117,14 @@ export async function PUT(req: Request) {
   try {
     const { productId, name, description, price, images } = await req.json();
 
+    // Get the existing product with its default price
     const existingProduct = await prisma.product.findUnique({
       where: { id: productId },
+      include: {
+        prices: true,
+      },
     });
+    
     if (!existingProduct) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
@@ -101,30 +134,67 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    // Update the product
     let updatedProduct = await prisma.product.update({
       where: { id: productId },
       data: {
         name,
         description,
-        price: price || 0,
         images: images || [],
       },
-    });
+      include: {
+        prices: {
+          where: { isDefault: true },
+        },
+      },
+    }) as typeof existingProduct;
 
     // Sync update with Stripe if user has a Stripe account
     const currentUser = await prisma.user.findUnique({ where: { id: userId } });
     if (currentUser?.stripeAccountId) {
       if (updatedProduct.stripeProductId) {
         try {
+          // Update the Stripe product
           await stripe.products.update(updatedProduct.stripeProductId, {
             name,
             description,
           });
+
+          // Update the default price if price has changed
+          const defaultPrice = existingProduct.prices.find(p => p.isDefault);
+          if (defaultPrice && price !== defaultPrice.unitAmount) {
+            const stripePrice = await stripe.prices.create(
+              {
+                unit_amount: price,
+                currency: "usd",
+                product: updatedProduct.stripeProductId,
+              },
+              { stripeAccount: currentUser.stripeAccountId }
+            );
+
+            // Update the default price and refresh the product data
+            await prisma.price.update({
+              where: { id: defaultPrice.id },
+              data: {
+                stripePriceId: stripePrice.id,
+                unitAmount: price,
+              },
+            });
+
+            // Refresh the product data to get updated prices
+            updatedProduct = await prisma.product.findUnique({
+              where: { id: productId },
+              include: {
+                prices: true,
+              },
+            }) as typeof existingProduct;
+          }
         } catch (stripeError) {
           console.error("Stripe update error:", stripeError);
         }
       } else {
         try {
+          // Create new Stripe product and price
           const stripeProduct = await stripe.products.create(
             {
               name,
@@ -132,9 +202,35 @@ export async function PUT(req: Request) {
             },
             { stripeAccount: currentUser.stripeAccountId }
           );
+
+          const stripePrice = await stripe.prices.create(
+            {
+              unit_amount: price,
+              currency: "usd",
+              product: stripeProduct.id,
+            },
+            { stripeAccount: currentUser.stripeAccountId }
+          );
+
+          // Update product with Stripe ID and create default price
           updatedProduct = await prisma.product.update({
             where: { id: productId },
-            data: { stripeProductId: stripeProduct.id },
+            data: {
+              stripeProductId: stripeProduct.id,
+              prices: {
+                create: {
+                  stripePriceId: stripePrice.id,
+                  unitAmount: price,
+                  currency: "usd",
+                  isDefault: true,
+                  paymentStyle: "INSTANT",
+                  allocatedQuantity: 0,
+                },
+              },
+            },
+            include: {
+              prices: true,
+            },
           });
         } catch (stripeError) {
           console.error("Stripe sync error:", stripeError);

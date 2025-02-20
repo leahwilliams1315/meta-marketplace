@@ -19,6 +19,8 @@ export function CartDropdown() {
     0
   );
 
+  const isRequestCart = state.items.some(item => item.paymentStyle === 'REQUEST');
+
   const handleCheckout = async () => {
     try {
       const response = await fetch("/api/checkout", {
@@ -100,9 +102,16 @@ export function CartDropdown() {
                     <h3 className="font-medium text-sm text-[#453E3E] truncate">
                       {item.name}
                     </h3>
-                    <p className="text-sm text-[#666666]">
-                      {formatPrice(item.price)}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-[#666666]">
+                        {formatPrice(item.price)}
+                      </p>
+                      {item.paymentStyle === 'REQUEST' && (
+                        <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded">
+                          Request
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 mt-2">
                       <Button
                         variant="ghost"
@@ -169,7 +178,7 @@ export function CartDropdown() {
               onClick={handleCheckout}
               className="w-full bg-[#453E3E] hover:bg-[#2A2424] text-white"
             >
-              Checkout
+              {isRequestCart ? 'Submit Purchase Request' : 'Checkout'}
             </Button>
           </div>
         )}

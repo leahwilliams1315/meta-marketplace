@@ -14,6 +14,7 @@ interface CartItem {
   price: number;
   image: string;
   quantity: number;
+  paymentStyle: 'INSTANT' | 'REQUEST';
 }
 
 interface CartState {
@@ -34,6 +35,18 @@ const CartContext = createContext<{
 } | null>(null);
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
+  const validateQuantity = (items: CartItem[]) => {
+    // Group items by payment style
+    const requestItems = items.filter(item => item.paymentStyle === 'REQUEST');
+    const instantItems = items.filter(item => item.paymentStyle === 'INSTANT');
+    
+    // If there are both types, only keep one type
+    if (requestItems.length > 0 && instantItems.length > 0) {
+      return requestItems.length > instantItems.length ? requestItems : instantItems;
+    }
+    
+    return items;
+  };
   switch (action.type) {
     case "ADD_ITEM": {
       const existingItem = state.items.find(
@@ -49,9 +62,13 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
           ),
         };
       }
+      const newItems = validateQuantity([
+        ...state.items,
+        { ...action.payload, quantity: 1 },
+      ]);
       return {
         ...state,
-        items: [...state.items, { ...action.payload, quantity: 1 }],
+        items: newItems,
       };
     }
     case "REMOVE_ITEM":

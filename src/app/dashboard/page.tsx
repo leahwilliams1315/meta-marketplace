@@ -9,6 +9,7 @@ import { SyncAllProductsButton } from "@/components/SyncAllProductsButton";
 import { stripe } from "@/lib/stripe";
 import { Product } from "@prisma/client";
 import { ImageCarousel } from "@/components/ImageCarousel";
+import DeleteProductButton from "@/components/DeleteProductButton";
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -161,12 +162,24 @@ export default async function DashboardPage() {
                       isSynced: p.isSynced,
                     }))}
                   />
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {enhancedProducts.map((product) => (
                       <div
                         key={product.id}
-                        className="bg-white rounded-lg border border-[#E5E5E5] overflow-hidden hover:shadow-lg transition-shadow duration-200 relative group"
+                        className="bg-white rounded-lg border border-[#E5E5E5] p-6 flex flex-col"
                       >
+                        <div className="flex justify-between items-center">
+                          <h3 className="text-lg font-semibold text-[#453E3E]">
+                            {product.name}
+                          </h3>
+                          <DeleteProductButton
+                            productId={product.id}
+                            stripeProductId={product.stripeProductId}
+                          />
+                        </div>
+                        <p className="text-[#666666] text-sm mt-2">
+                          {product.description}
+                        </p>
                         <div className="relative">
                           <div className="aspect-square rounded-t-lg overflow-hidden">
                             <ImageCarousel
@@ -188,36 +201,28 @@ export default async function DashboardPage() {
                           </div>
                         </div>
                         <div className="p-3">
-                          <h3 className="font-medium text-[#453E3E] text-sm mb-1">
-                            {product.name}
-                          </h3>
-                          <p className="text-[#666666] text-xs mb-2 line-clamp-2">
-                            {product.description}
+                          <p className="font-bold text-[#453E3E] text-base">
+                            ${(product.price / 100).toFixed(2)}
                           </p>
-                          <div className="flex items-center justify-between">
-                            <p className="font-bold text-[#453E3E] text-base">
-                              ${(product.price / 100).toFixed(2)}
-                            </p>
-                            <Link
-                              href={`/create-product?productId=${product.id}`}
-                              className="inline-flex items-center text-[#F97316] text-xs font-medium hover:text-[#F97316]/90 transition-colors"
+                          <Link
+                            href={`/create-product?productId=${product.id}`}
+                            className="inline-flex items-center text-[#F97316] text-xs font-medium hover:text-[#F97316]/90 transition-colors"
+                          >
+                            <svg
+                              className="w-3.5 h-3.5 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
                             >
-                              <svg
-                                className="w-3.5 h-3.5 mr-1"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                />
-                              </svg>
-                              Edit
-                            </Link>
-                          </div>
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              />
+                            </svg>
+                            Edit
+                          </Link>
                         </div>
                       </div>
                     ))}

@@ -37,29 +37,34 @@ export async function POST(req: Request) {
   let updatedProduct = product;
   try {
     if (product.stripeProductId) {
-      // Update existing Stripe product
+      // Update existing Stripe product using merchant's stripe account
       const updatedStripeProduct = await stripe.products.update(
         product.stripeProductId,
         {
           name,
           description,
-        }
+        },
+        { stripeAccount: user.stripeAccountId }
       );
       if (!updatedStripeProduct) {
         throw new Error("Stripe product update returned null or undefined");
       }
     } else {
-      // Check if a Stripe product already exists by searching for metadata
-      const searchResults = await stripe.products.search({
-        query: `metadata['localProductId']:"${productId}"`,
-        limit: 1,
-      });
+      // Check if a Stripe product already exists by searching for metadata using merchant's context
+      const searchResults = await stripe.products.search(
+        {
+          query: `metadata['localProductId']:"${productId}"`,
+          limit: 1,
+        },
+        { stripeAccount: user.stripeAccountId }
+      );
       if (searchResults.data.length > 0) {
         // Found an existing Stripe product; update it
         const existingStripeProduct = searchResults.data[0];
         const updatedStripeProduct = await stripe.products.update(
           existingStripeProduct.id,
-          { name, description }
+          { name, description },
+          { stripeAccount: user.stripeAccountId }
         );
         if (!updatedStripeProduct) {
           throw new Error("Stripe product update returned null or undefined");
@@ -79,9 +84,7 @@ export async function POST(req: Request) {
           { stripeAccount: user.stripeAccountId }
         );
         if (!stripeProduct || !stripeProduct.id) {
-          throw new Error(
-            "Stripe product creation returned null or missing id"
-          );
+          throw new Error("Stripe product creation returned null or missing id");
         }
         updatedProduct = await prisma.product.update({
           where: { id: productId },

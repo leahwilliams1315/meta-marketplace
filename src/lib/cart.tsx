@@ -15,6 +15,8 @@ interface CartItem {
   image: string;
   quantity: number;
   paymentStyle: 'INSTANT' | 'REQUEST';
+  sellerId: string;
+  priceId: string;
 }
 
 interface CartState {
@@ -112,10 +114,34 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const savedCart = localStorage.getItem(CART_STORAGE_KEY);
     if (savedCart) {
-      const { items } = JSON.parse(savedCart);
-      items.forEach((item: CartItem) => {
-        dispatch({ type: "ADD_ITEM", payload: item });
-      });
+      try {
+        const { items } = JSON.parse(savedCart);
+        // Validate items have the required fields
+        const validItems = items.filter((item: CartItem) => {
+          return (
+            item.id &&
+            item.name &&
+            item.price &&
+            item.image &&
+            item.paymentStyle &&
+            item.sellerId &&
+            item.priceId
+          );
+        });
+
+        if (validItems.length !== items.length) {
+          // Some items were invalid, clear the cart
+          localStorage.removeItem(CART_STORAGE_KEY);
+          return;
+        }
+
+        validItems.forEach((item: CartItem) => {
+          dispatch({ type: "ADD_ITEM", payload: item });
+        });
+      } catch {
+        // Invalid JSON or other error, clear the cart
+        localStorage.removeItem(CART_STORAGE_KEY);
+      }
     }
   }, []);
 

@@ -66,6 +66,8 @@ export function ProductCard({ product }: ProductCardProps) {
         price: price.unitAmount,
         image: product.images && product.images[0] ? product.images[0] : "",
         paymentStyle: price.paymentStyle,
+        sellerId: product.seller.id,
+        priceId: price.id,
       },
     });
   };

@@ -43,11 +43,17 @@ const PriceItem = ({ price, onDelete, onChange, isDefault, onSetDefault, disable
               <span className="text-2xl font-semibold text-primary">$</span>
               <Input
                 type="number"
-                value={price.unitAmount / 100}
-                onChange={(e) => onChange({ ...price, unitAmount: Math.round(parseFloat(e.target.value) * 100) })}
+                value={(price.unitAmount / 100).toFixed(2)}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  if (isNaN(value) || value < 0) return;
+                  onChange({ ...price, unitAmount: Math.round(value * 100) });
+                }}
                 className="w-24 text-lg font-medium"
                 placeholder="0.00"
                 disabled={disabled}
+                step="0.01"
+                min="0"
               />
             </div>
             <span className="text-xs text-muted-foreground">USD</span>
@@ -57,10 +63,16 @@ const PriceItem = ({ price, onDelete, onChange, isDefault, onSetDefault, disable
             <Input
               type="number"
               value={price.allocatedQuantity}
-              onChange={(e) => onChange({ ...price, allocatedQuantity: parseInt(e.target.value) })}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                if (isNaN(value) || value < 1) return;
+                onChange({ ...price, allocatedQuantity: value });
+              }}
               className="w-20"
               placeholder="Qty"
               disabled={disabled}
+              min="1"
+              step="1"
             />
             <span className="text-xs text-muted-foreground">Available</span>
           </div>
@@ -152,26 +164,59 @@ export function PriceList({ prices, onChange, className, disabled }: PriceListPr
 
   return (
     <div className={cn("space-y-4", className)}>
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Prices</h3>
-        <Button type="button" onClick={handleAddPrice} variant="outline" disabled={disabled}>
-          <Plus className="h-4 w-4 mr-2" />
+      <div className="flex justify-between items-center mb-4">
+        <div className="space-y-1">
+          <h3 className="text-lg font-semibold">Pricing Options</h3>
+          <p className="text-sm text-muted-foreground">
+            Add different pricing tiers for your product.
+          </p>
+        </div>
+        <Button 
+          type="button" 
+          onClick={handleAddPrice} 
+          variant="outline" 
+          disabled={disabled}
+          size="sm"
+          className="h-8"
+        >
+          <Plus className="h-4 w-4 mr-1.5" />
           Add Price
         </Button>
       </div>
-      <AnimatedList>
-        {prices.map((price, index) => (
-          <PriceItem
-            key={price.id || index}
-            price={price}
-            onDelete={() => handleDeletePrice(index)}
-            onChange={(updatedPrice) => handlePriceChange(index, updatedPrice)}
-            isDefault={price.id === defaultPriceId}
-            onSetDefault={() => handleSetDefault(index)}
-            disabled={disabled}
-          />
-        ))}
-      </AnimatedList>
+      <div className="space-y-3">
+        <AnimatedList>
+          {prices.map((price, index) => (
+            <PriceItem
+              key={price.id || index}
+              price={price}
+              onDelete={() => handleDeletePrice(index)}
+              onChange={(updatedPrice) => handlePriceChange(index, updatedPrice)}
+              isDefault={price.id === defaultPriceId}
+              onSetDefault={() => handleSetDefault(index)}
+              disabled={disabled}
+            />
+          ))}
+        </AnimatedList>
+        {prices.length === 0 && (
+          <div className="flex h-[100px] items-center justify-center rounded-lg border border-dashed">
+            <div className="flex flex-col items-center gap-1.5">
+              <p className="text-sm text-muted-foreground">
+                No prices added yet
+              </p>
+              <Button
+                type="button"
+                onClick={handleAddPrice}
+                variant="ghost"
+                disabled={disabled}
+                size="sm"
+                className="h-8"
+              >
+                Add your first price
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

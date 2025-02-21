@@ -4,9 +4,14 @@ import { cn } from "@/lib/utils";
 import { AnimatedList } from "@/components/ui/animated-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { useState } from "react";
 import { Trash2, Plus } from "lucide-react";
+
+interface Marketplace {
+  id: string;
+  name: string;
+  slug: string;
+}
 
 export interface Price {
   id?: string;
@@ -14,8 +19,8 @@ export interface Price {
   isDefault: boolean;
   paymentStyle: 'INSTANT' | 'REQUEST';
   allocatedQuantity: number;
-  // Assuming USD for now
   currency: 'USD';
+  marketplaceId?: string;
 }
 
 interface PriceItemProps {
@@ -25,9 +30,10 @@ interface PriceItemProps {
   isDefault: boolean;
   onSetDefault: () => void;
   disabled?: boolean;
+  marketplaces: Marketplace[];
 }
 
-const PriceItem = ({ price, onDelete, onChange, isDefault, onSetDefault, disabled }: PriceItemProps) => {
+const PriceItem = ({ price, onDelete, onChange, isDefault, onSetDefault, disabled, marketplaces }: PriceItemProps) => {
   return (
     <div
       className={cn(
@@ -77,14 +83,35 @@ const PriceItem = ({ price, onDelete, onChange, isDefault, onSetDefault, disable
             <span className="text-xs text-muted-foreground">Available</span>
           </div>
           <div className="h-8 w-px bg-border" />
-          <Select
-            value={price.paymentStyle}
-            onValueChange={(value) => onChange({ ...price, paymentStyle: value as 'INSTANT' | 'REQUEST' })}
-            disabled={disabled}
-          >
-            <option value="INSTANT">Buy Now</option>
-            <option value="REQUEST">Request</option>
-          </Select>
+          <div className="flex flex-col">
+            <select
+              value={price.paymentStyle}
+              onChange={(e) => onChange({ ...price, paymentStyle: e.target.value as 'INSTANT' | 'REQUEST' })}
+              disabled={disabled}
+              className="w-32 rounded-md border bg-background px-2 py-1.5 text-sm"
+            >
+              <option value="INSTANT">Buy Now</option>
+              <option value="REQUEST">Request</option>
+            </select>
+            <span className="text-xs text-muted-foreground">Payment Style</span>
+          </div>
+          <div className="h-8 w-px bg-border" />
+          <div className="flex flex-col">
+            <select
+              value={price.marketplaceId || ''}
+              onChange={(e) => onChange({ ...price, marketplaceId: e.target.value || undefined })}
+              disabled={disabled}
+              className="w-40 rounded-md border bg-background px-2 py-1.5 text-sm"
+            >
+              <option value="">All Marketplaces</option>
+              {marketplaces
+                .filter(m => !price.marketplaceId || m.id === price.marketplaceId)
+                .map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+            <span className="text-xs text-muted-foreground">Marketplace</span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -118,20 +145,27 @@ interface PriceListProps {
   onChange: (prices: Price[]) => void;
   className?: string;
   disabled?: boolean;
+  marketplaces: Marketplace[];
 }
 
-export function PriceList({ prices, onChange, className, disabled }: PriceListProps) {
+export function PriceList({ prices, onChange, className, disabled, marketplaces }: PriceListProps) {
   const [defaultPriceId, setDefaultPriceId] = useState<string | undefined>(
     prices.find(p => p.isDefault)?.id
   );
 
   const handleAddPrice = () => {
+    // Find available marketplaces (not already used)
+    const usedMarketplaceIds = new Set(prices.map(p => p.marketplaceId).filter(Boolean));
+    const availableMarketplaces = marketplaces.filter(m => !usedMarketplaceIds.has(m.id));
+
     const newPrice: Price = {
       unitAmount: 0,
       currency: "USD",
       isDefault: prices.length === 0,
       paymentStyle: "INSTANT",
-      allocatedQuantity: 1
+      allocatedQuantity: 1,
+      // If there's only one marketplace left, auto-select it
+      marketplaceId: availableMarketplaces.length === 1 ? availableMarketplaces[0].id : undefined
     };
     onChange([...prices, newPrice]);
     if (prices.length === 0) {
@@ -194,6 +228,7 @@ export function PriceList({ prices, onChange, className, disabled }: PriceListPr
               isDefault={price.id === defaultPriceId}
               onSetDefault={() => handleSetDefault(index)}
               disabled={disabled}
+              marketplaces={marketplaces}
             />
           ))}
         </AnimatedList>

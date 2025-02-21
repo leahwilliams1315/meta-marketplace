@@ -14,7 +14,6 @@ interface Product {
   name: string;
   description: string;
   images: string[];
-  marketplaceId: string;
   prices: Price[];
 }
 
@@ -43,9 +42,7 @@ export const CreateProductForm = ({
     }]
   );
   const [images, setImages] = useState<string[]>(initialData?.images || []);
-  const [selectedMarketplaceId, setSelectedMarketplaceId] = useState(
-    initialData?.marketplaceId || (marketplaces[0]?.id ?? "")
-  );
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -56,7 +53,7 @@ export const CreateProductForm = ({
       setDescription(initialData.description);
       setPrices(initialData.prices);
       setImages(initialData.images);
-      setSelectedMarketplaceId(initialData.marketplaceId);
+
     }
   }, [initialData]);
 
@@ -65,22 +62,45 @@ export const CreateProductForm = ({
     setLoading(true);
     setError("");
     try {
-      // Validate that we have at least one price
+      // Validate name
+      if (!name.trim()) {
+        throw new Error("Please enter a product name");
+      }
+
+      // Validate prices
       if (prices.length === 0) {
         throw new Error("Please add at least one price");
       }
       
-      // Validate that we have exactly one default price
+      // Validate default price
       const defaultPrices = prices.filter(p => p.isDefault);
       if (defaultPrices.length !== 1) {
         throw new Error("Please set exactly one default price");
+      }
+
+      // Validate price amounts
+      const invalidPrices = prices.filter(p => p.unitAmount <= 0);
+      if (invalidPrices.length > 0) {
+        throw new Error("All prices must be greater than zero");
+      }
+
+      // Validate quantities
+      const invalidQuantities = prices.filter(p => p.allocatedQuantity < 1);
+      if (invalidQuantities.length > 0) {
+        throw new Error("All quantities must be at least 1");
+      }
+
+      // Check for duplicate marketplace prices
+      const marketplacePrices = prices.filter(p => p.marketplaceId);
+      const marketplaceIds = marketplacePrices.map(p => p.marketplaceId);
+      if (marketplaceIds.length !== new Set(marketplaceIds).size) {
+        throw new Error("Each marketplace can only have one price");
       }
 
       await onSubmitForm({
         name,
         description,
         images,
-        marketplaceId: selectedMarketplaceId,
         prices,
       });
     } catch (err: unknown) {
@@ -99,24 +119,7 @@ export const CreateProductForm = ({
           {error}
         </div>
       )}
-      <div>
-        <label className="block mb-2 text-sm font-medium text-[#453E3E]">
-          Marketplace
-        </label>
-        <select
-          className="w-full px-3 py-2 bg-white border border-[#E5E5E5] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
-          value={selectedMarketplaceId}
-          onChange={(e) => setSelectedMarketplaceId(e.target.value)}
-          required
-          disabled={loading}
-        >
-          {marketplaces.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}
-            </option>
-          ))}
-        </select>
-      </div>
+
       <div>
         <label className="block mb-2 text-sm font-medium text-[#453E3E]">
           Name
@@ -150,6 +153,7 @@ export const CreateProductForm = ({
           onChange={setPrices}
           className="mb-6"
           disabled={loading}
+          marketplaces={marketplaces}
         />
       </div>
       <div>

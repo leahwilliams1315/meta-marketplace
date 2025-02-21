@@ -7,22 +7,59 @@ import prisma from "@/lib/prisma";
 import { ProductCard } from "@/components/ProductCard";
 import type { Marketplace, Product, User } from "@prisma/client";
 
-type ProductWithSeller = Product & {
-  seller: User;
+import { PaymentStyle } from '@prisma/client';
+
+interface ProductProps {
+  id: string;
+  name: string;
+  description: string;
   images: string[];
-  prices: {
+  stripeProductId: string | null;
+  totalQuantity: number;
+  seller: {
+    id: string;
+    slug: string | null;
+    name?: string;
+    imageUrl?: string;
+  };
+  prices: Array<{
     id: string;
     unitAmount: number;
     currency: string;
     isDefault: boolean;
-    paymentStyle: 'INSTANT' | 'REQUEST';
+    paymentStyle: PaymentStyle;
     allocatedQuantity: number;
     marketplaceId: string | null;
-  }[];
+  }>;
+  currentMarketplaceId?: string;
+}
+
+type DbPrice = {
+  id: string;
+  stripePriceId: string;
+  unitAmount: number;
+  currency: string;
+  isDefault: boolean;
+  paymentStyle: PaymentStyle;
+  allocatedQuantity: number;
+  marketplaceId: string | null;
+  product: Product & {
+    seller: User;
+    prices: Array<{
+      id: string;
+      stripePriceId: string;
+      unitAmount: number;
+      currency: string;
+      isDefault: boolean;
+      paymentStyle: PaymentStyle;
+      allocatedQuantity: number;
+      marketplaceId: string | null;
+    }>;
+  };
 };
 
 type MarketplaceWithRelations = Marketplace & {
-  products: ProductWithSeller[];
+  prices: DbPrice[];
   owners: User[];
   members: User[];
 };
@@ -46,11 +83,15 @@ export default async function MarketplacePage({
   const marketplace = await prisma.marketplace.findUnique({
     where: { slug },
     include: {
-      products: {
+      prices: {
         include: {
-          seller: true,
-          prices: true,
-        },
+          product: {
+            include: {
+              seller: true,
+              prices: true,
+            }
+          }
+        }
       },
       owners: true,
       members: true,
@@ -71,7 +112,7 @@ export default async function MarketplacePage({
 
   // Fetch Clerk user information for all sellers
   const sellerIds = [
-    ...new Set(marketplace.products.map((product) => product.sellerId)),
+    ...new Set(marketplace.prices.map((price) => price.product.sellerId)),
   ];
   const clerk = await clerkClient();
   const clerkUsers = await Promise.all(
@@ -95,18 +136,40 @@ export default async function MarketplacePage({
     (member) => member.id === userId
   );
 
-  // Enhance products with Clerk user data
-  const enhancedProducts = typedMarketplace.products.map((product) => {
-    const clerkUserData = userMap.get(product.sellerId);
-    return {
-      ...product,
-      seller: {
-        ...product.seller,
-        name: clerkUserData?.name || "Anonymous",
-        imageUrl: clerkUserData?.imageUrl,
-      },
-    };
-  });
+  // Get unique products and enhance them with Clerk user data
+  const uniqueProducts: ProductProps[] = Array.from(
+    new Map(
+      typedMarketplace.prices.map(price => [
+        price.product.id,
+        {
+          id: price.product.id,
+          name: price.product.name,
+          description: price.product.description,
+          images: price.product.images as string[],
+          stripeProductId: price.product.stripeProductId,
+          totalQuantity: price.product.totalQuantity,
+          prices: typedMarketplace.prices
+            .filter(p => p.product.id === price.product.id)
+            .map(p => ({
+              id: p.id,
+              unitAmount: p.unitAmount,
+              currency: p.currency,
+              isDefault: p.isDefault,
+              paymentStyle: p.paymentStyle,
+              allocatedQuantity: p.allocatedQuantity,
+              marketplaceId: p.marketplaceId,
+            })),
+          seller: {
+            id: price.product.seller.id,
+            slug: price.product.seller.slug,
+            name: userMap.get(price.product.seller.id)?.name || "Anonymous",
+            imageUrl: userMap.get(price.product.seller.id)?.imageUrl,
+          },
+          currentMarketplaceId: typedMarketplace.id
+        }
+      ])
+    ).values()
+  );
 
   return (
     <div className="py-24">
@@ -129,13 +192,13 @@ export default async function MarketplacePage({
             {typedMarketplace.members.length} member{typedMarketplace.members.length !== 1 ? 's' : ''}
           </div>
           <div className="text-sm text-muted-foreground">
-            {enhancedProducts.length} product{enhancedProducts.length !== 1 ? 's' : ''}
+            {uniqueProducts.length} product{uniqueProducts.length !== 1 ? 's' : ''}
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {enhancedProducts.map((product) => (
+        {uniqueProducts.map((product) => (
           <ProductCard
             key={product.id}
             product={{

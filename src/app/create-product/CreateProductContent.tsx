@@ -4,12 +4,21 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CreateProductForm } from "@/components/CreateProductForm";
 
+interface Price {
+  id?: string;
+  unitAmount: number;
+  currency: 'USD';
+  isDefault: boolean;
+  paymentStyle: "INSTANT" | "REQUEST";
+  allocatedQuantity: number;
+  marketplaceId?: string;
+}
+
 interface Product {
   name: string;
   description: string;
-  price: number;
   images: string[];
-  marketplaceId: string;
+  prices: Price[];
 }
 
 export default function CreateProductContent() {
@@ -42,9 +51,16 @@ export default function CreateProductContent() {
           setInitialData({
             name: data.name,
             description: data.description,
-            price: data.price,
-            images: data.images,
-            marketplaceId: data.marketplaceId,
+            images: data.images || [],
+            prices: data.prices.map((p: Price) => ({
+              id: p.id,
+              unitAmount: p.unitAmount,
+              currency: p.currency,
+              isDefault: p.isDefault,
+              paymentStyle: p.paymentStyle,
+              allocatedQuantity: p.allocatedQuantity,
+              marketplaceId: p.marketplaceId
+            }))
           });
         }
       }
@@ -56,6 +72,13 @@ export default function CreateProductContent() {
     const url = "/api/products";
     const method = productId ? "PUT" : "POST";
     const body = productId ? { productId, ...formData } : formData;
+    
+    // Ensure at least one price is marked as default
+    if (!formData.prices.some(p => p.isDefault)) {
+      console.error("At least one price must be marked as default");
+      return;
+    }
+    
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },

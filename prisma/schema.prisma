@@ -29,17 +29,16 @@ model User {
 }
 
 model Marketplace {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
-  slug        String    @unique
+  slug        String   @unique
   description String?
   city        String? // If you want location-based searches on the marketplace
   type        String? // e.g., "Pottery", "Jewelry", etc. for future
-  owners      User[]    @relation("MarketplaceOwners")
-  members     User[]    @relation("MarketplaceMembers")
-  products    Product[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  owners      User[]   @relation("MarketplaceOwners")
+  members     User[]   @relation("MarketplaceMembers")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   prices Price[]
 }
@@ -50,19 +49,19 @@ enum PaymentStyle {
 }
 
 model Product {
-  id              String      @id @default(cuid())
+  id              String   @id @default(cuid())
   name            String
   description     String
-  images          Json        @default("[]")
+  images          Json     @default("[]")
   stripeProductId String? // Stripe product identifier
-  totalQuantity   Int         @default(0) // Total available inventory
-  marketplace     Marketplace @relation(fields: [marketplaceId], references: [id])
-  marketplaceId   String
-  seller          User        @relation(fields: [sellerId], references: [id])
+  totalQuantity   Int      @default(0) // Total available inventory across all prices
+  seller          User     @relation(fields: [sellerId], references: [id])
   sellerId        String
   prices          Price[] // All prices associated with this product
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([sellerId])
 }
 
 model Price {
@@ -74,7 +73,7 @@ model Price {
   paymentStyle      PaymentStyle @default(INSTANT)
   allocatedQuantity Int          @default(0) // Quantity allocated for this price
 
-  // Optional marketplace association. If null, this is the default price.
+  // Optional marketplace association. If null, this price is available in all marketplaces
   marketplace   Marketplace? @relation(fields: [marketplaceId], references: [id])
   marketplaceId String?
 
@@ -84,6 +83,9 @@ model Price {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([marketplaceId])
+  @@index([productId])
 }
 
 enum PurchaseRequestStatus {

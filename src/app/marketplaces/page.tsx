@@ -8,12 +8,7 @@ export default async function MarketplacesPage() {
 
   const marketplaces = await prisma.marketplace.findMany({
     orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      slug: true,
-      createdAt: true,
+    include: {
       owners: {
         where: { id: userId || "" },
         select: { id: true },
@@ -22,17 +17,29 @@ export default async function MarketplacesPage() {
         where: { id: userId || "" },
         select: { id: true },
       },
+      prices: {
+        select: {
+          product: {
+            select: {
+              id: true,
+            },
+          },
+        },
+        distinct: ['productId'], // Count each product only once
+      },
       _count: {
         select: {
           members: true,
-          products: true,
         },
       },
     },
   });
 
   const serializedMarketplaces = marketplaces.map((m) => ({
-    ...m,
+    id: m.id,
+    name: m.name,
+    description: m.description,
+    slug: m.slug,
     createdAt: m.createdAt.toISOString(),
     role: userId
       ? m.owners.length > 0
@@ -41,6 +48,10 @@ export default async function MarketplacesPage() {
         ? "member"
         : null
       : null,
+    _count: {
+      members: m._count.members,
+      products: m.prices.length, // Count unique products through prices
+    },
   }));
 
   return (

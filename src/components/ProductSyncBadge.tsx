@@ -56,7 +56,7 @@ export function ProductSyncBadge({
             isSynced ? "bg-green-500" : "bg-yellow-500"
           }`}
         />
-        {isSynced ? "Synced" : "Not Synced"}
+        {isSynced ? "Synced" : "Force Sync"}
       </div>
       {!isSynced && (
         <button

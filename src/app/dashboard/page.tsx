@@ -304,7 +304,7 @@ export default async function DashboardPage() {
                         </div>
                         <div className="p-3">
                           <p className="font-bold text-[#453E3E] text-base">
-                            ${(product.prices?.[0]?.unitAmount || 0 / 100).toFixed(2)}
+                            ${((product.prices?.[0]?.unitAmount / 100) || 0 / 100).toFixed(2)}
                           </p>
                           <Link
                             href={`/create-product?productId=${product.id}`}

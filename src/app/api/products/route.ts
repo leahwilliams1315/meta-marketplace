@@ -182,7 +182,21 @@ export async function PUT(req: Request) {
   }
 
   try {
-    const { productId, name, description, images, prices }: { productId: string; name: string; description?: string; images?: string[]; prices: Price[] } = await req.json();
+    const { productId, name, description, images, prices }: {
+      productId: string;
+      name: string;
+      description?: string;
+      images?: string[];
+      prices: Array<{
+        id?: string;
+        unitAmount: number;
+        currency: string;
+        isDefault: boolean;
+        paymentStyle: "INSTANT" | "REQUEST";
+        allocatedQuantity: number;
+        marketplaceId?: string;
+      }>;
+    } = await req.json();
 
     // Get the existing product with its prices
     const existingProduct = await prisma.product.findUnique({

@@ -1,6 +1,7 @@
 "use client";
 
 import { ShoppingCart, Minus, Plus, X } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -23,6 +24,15 @@ export function CartDropdown() {
 
   const handleCheckout = async () => {
     try {
+      // For request-type items, we've already created the purchase request
+      // Just clear the cart and show a success message
+      if (isRequestCart) {
+        dispatch({ type: "CLEAR_CART" });
+        toast.success('Purchase request submitted successfully');
+        return;
+      }
+
+      // Regular checkout flow
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: {
@@ -35,9 +45,12 @@ export function CartDropdown() {
 
       if (data.url) {
         window.location.href = data.url;
+      } else if (data.error) {
+        toast.error(data.error);
       }
     } catch (error) {
       console.error("Checkout error:", error);
+      toast.error('Failed to process checkout');
     }
   };
 
@@ -107,8 +120,10 @@ export function CartDropdown() {
                         {formatPrice(item.price)}
                       </p>
                       {item.paymentStyle === 'REQUEST' && (
-                        <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded">
-                          Request
+                        <span
+                          className={`text-xs px-1.5 py-0.5 rounded ${item.requestStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : item.requestStatus === 'APPROVED' ? 'bg-green-100 text-green-800' : item.requestStatus === 'REJECTED' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}
+                        >
+                          {item.requestStatus || 'Request'}
                         </span>
                       )}
                     </div>

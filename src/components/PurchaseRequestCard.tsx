@@ -19,27 +19,26 @@ import {
 interface PurchaseRequestCardProps {
   request: {
     id: string;
-    items: any[];
     status: string;
     buyer: {
       id: string;
       name?: string;
       imageUrl?: string;
     };
-    createdAt: Date;
-  };
-  products: {
-    id: string;
-    name: string;
-    images: string[];
-    prices: {
+    product: {
+      id: string;
+      name: string;
+      images: string[];
+    };
+    price: {
       unitAmount: number;
       paymentStyle: string;
-    }[];
-  }[];
+    };
+    createdAt: Date;
+  };
 }
 
-export function PurchaseRequestCard({ request, products }: PurchaseRequestCardProps) {
+export function PurchaseRequestCard({ request }: PurchaseRequestCardProps) {
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -88,10 +87,6 @@ export function PurchaseRequestCard({ request, products }: PurchaseRequestCardPr
     }
   };
 
-  // Calculate total amount
-  const total = request.items.reduce((acc, item) => {
-    return acc + (item.price * item.quantity);
-  }, 0);
 
   return (
     <div className="bg-white rounded-lg border border-[#E5E5E5] p-6">
@@ -121,44 +116,37 @@ export function PurchaseRequestCard({ request, products }: PurchaseRequestCardPr
           </div>
         </div>
         <div className="text-right">
-          <div className="font-medium text-[#453E3E]">{formatPrice(total)}</div>
+          <div className="font-medium text-[#453E3E]">{formatPrice(request.price.unitAmount)}</div>
           <div className="text-sm text-muted-foreground">
-            {request.items.length} item{request.items.length !== 1 ? "s" : ""}
+            1 item
           </div>
         </div>
       </div>
 
       <div className="space-y-3 mb-6">
-        {request.items.map((item) => {
-          const product = products.find((p) => p.id === item.id);
-          if (!product) return null;
-
-          return (
-            <div key={item.id} className="flex items-center gap-3">
-              <div className="relative w-16 h-16 rounded-md overflow-hidden bg-[#faf9f7]">
-                <Image
-                  src={product.images[0] || ""}
-                  alt={product.name}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-medium text-sm text-[#453E3E]">
-                  {product.name}
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Quantity: {item.quantity}
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="font-medium text-sm text-[#453E3E]">
-                  {formatPrice(item.price)}
-                </div>
-              </div>
+        <div className="flex items-center gap-3">
+          <div className="relative w-16 h-16 rounded-md overflow-hidden bg-[#faf9f7]">
+            <Image
+              src={(request.product.images as string[])[0] || ""}
+              alt={request.product.name}
+              fill
+              className="object-cover"
+            />
+          </div>
+          <div className="flex-1">
+            <h4 className="font-medium text-sm text-[#453E3E]">
+              {request.product.name}
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              Quantity: 1
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="font-medium text-sm text-[#453E3E]">
+              {formatPrice(request.price.unitAmount)}
             </div>
-          );
-        })}
+          </div>
+        </div>
       </div>
 
       <div className="flex gap-3">

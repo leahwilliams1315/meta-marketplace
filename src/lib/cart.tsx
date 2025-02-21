@@ -17,6 +17,8 @@ interface CartItem {
   paymentStyle: 'INSTANT' | 'REQUEST';
   sellerId: string;
   priceId: string;
+  requestStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requestId?: string;
 }
 
 interface CartState {
@@ -28,6 +30,7 @@ type CartAction =
   | { type: "ADD_ITEM"; payload: Omit<CartItem, "quantity"> }
   | { type: "REMOVE_ITEM"; payload: string }
   | { type: "UPDATE_QUANTITY"; payload: { id: string; quantity: number } }
+  | { type: "UPDATE_REQUEST_STATUS"; payload: { id: string; status: 'PENDING' | 'APPROVED' | 'REJECTED'; requestId: string } }
   | { type: "TOGGLE_CART" }
   | { type: "CLEAR_CART" };
 
@@ -37,41 +40,54 @@ const CartContext = createContext<{
 } | null>(null);
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
-  const validateQuantity = (items: CartItem[]) => {
-    // Group items by payment style
-    const requestItems = items.filter(item => item.paymentStyle === 'REQUEST');
-    const instantItems = items.filter(item => item.paymentStyle === 'INSTANT');
-    
-    // If there are both types, only keep one type
-    if (requestItems.length > 0 && instantItems.length > 0) {
-      return requestItems.length > instantItems.length ? requestItems : instantItems;
+  const validateCart = (items: CartItem[], newItem?: CartItem) => {
+    // If adding a new item
+    if (newItem) {
+      const hasRequestItems = items.some(item => item.paymentStyle === 'REQUEST');
+      const hasInstantItems = items.some(item => item.paymentStyle === 'INSTANT');
+      
+      // If trying to add a request item to a cart with instant items
+      if (newItem.paymentStyle === 'REQUEST' && hasInstantItems) {
+        throw new Error('Cannot add request items when you have instant purchase items in cart');
+      }
+      
+      // If trying to add an instant item to a cart with request items
+      if (newItem.paymentStyle === 'INSTANT' && hasRequestItems) {
+        throw new Error('Cannot add instant purchase items when you have request items in cart');
+      }
     }
     
     return items;
   };
   switch (action.type) {
     case "ADD_ITEM": {
-      const existingItem = state.items.find(
-        (item) => item.id === action.payload.id
-      );
-      if (existingItem) {
+      try {
+        const existingItem = state.items.find(
+          (item) => item.id === action.payload.id
+        );
+        if (existingItem) {
+          return {
+            ...state,
+            items: state.items.map((item) =>
+              item.id === action.payload.id
+                ? { ...item, quantity: item.quantity + 1 }
+                : item
+            ),
+          };
+        }
+        
+        // Validate before adding new item
+        validateCart(state.items, { ...action.payload, quantity: 1 });
+        
         return {
           ...state,
-          items: state.items.map((item) =>
-            item.id === action.payload.id
-              ? { ...item, quantity: item.quantity + 1 }
-              : item
-          ),
+          items: [...state.items, { ...action.payload, quantity: 1 }],
         };
+      } catch (error) {
+        // TODO: Show error toast
+        console.error('Cart validation error:', error);
+        return state;
       }
-      const newItems = validateQuantity([
-        ...state.items,
-        { ...action.payload, quantity: 1 },
-      ]);
-      return {
-        ...state,
-        items: newItems,
-      };
     }
     case "REMOVE_ITEM":
       return {
@@ -96,6 +112,15 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       return {
         ...state,
         items: [],
+      };
+    case "UPDATE_REQUEST_STATUS":
+      return {
+        ...state,
+        items: state.items.map((item) =>
+          item.id === action.payload.id
+            ? { ...item, requestStatus: action.payload.status, requestId: action.payload.requestId }
+            : item
+        ),
       };
     default:
       return state;

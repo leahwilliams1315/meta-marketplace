@@ -67,28 +67,27 @@ export async function POST(req: Request) {
     const isRequest = items.some(item => item.paymentStyle === 'REQUEST');
 
     if (isRequest) {
-      // Create a purchase request in the database
-      // Convert items to a plain object that Prisma can serialize
-      const serializedItems = items.map(item => ({
-        ...item,
-        price: Number(item.price), // Ensure price is a number
-        quantity: Number(item.quantity), // Ensure quantity is a number
-      }));
-
-      const purchaseRequest = await prisma.purchaseRequest.create({
-        data: {
-          buyerId: userId,
-          items: serializedItems,
-          status: 'PENDING',
-        },
-      });
+      // Create a purchase request in the database for each item
+      const purchaseRequests = await Promise.all(
+        items.map(item =>
+          prisma.purchaseRequest.create({
+            data: {
+              buyerId: userId,
+              sellerId: item.sellerId,
+              productId: item.id,
+              priceId: item.priceId,
+              status: 'PENDING',
+            },
+          })
+        )
+      );
 
       // TODO: Send notification to seller about the purchase request
 
       return NextResponse.json({
         success: true,
-        message: 'Purchase request submitted successfully',
-        requestId: purchaseRequest.id,
+        message: 'Purchase requests submitted successfully',
+        requestIds: purchaseRequests.map(pr => pr.id),
       });
     } else {
       // Handle instant purchase with Stripe checkout

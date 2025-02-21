@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { CldUploadWidget } from "next-cloudinary";
 import { PriceList, type Price } from "./PriceList";
+import Image from "next/image";
 
 interface Marketplace {
   id: string;
@@ -194,11 +195,15 @@ export const CreateProductForm = ({
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {images.map((img, idx) => (
                 <div key={idx} className="relative group">
-                  <img
-                    src={img}
-                    alt={`Product image ${idx + 1}`}
-                    className="w-full h-32 object-cover rounded-md"
-                  />
+                  <div className="relative w-full h-32">
+                    <Image
+                      src={img}
+                      alt={`Product image ${idx + 1}`}
+                      fill
+                      className="object-cover rounded-md"
+                      sizes="(max-width: 768px) 50vw, 33vw"
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => {

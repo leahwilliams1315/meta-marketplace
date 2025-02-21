@@ -9,30 +9,31 @@ export default async function PurchaseRequestsPage() {
     redirect("/sign-in");
   }
 
-  // Get all products by the seller
-  const products = await prisma.product.findMany({
-    where: { sellerId: userId },
-    include: {
-      prices: true,
-    },
-  });
-
-  // Get all purchase requests for the seller's products
+  // Get all purchase requests where the user is the seller
   const purchaseRequests = await prisma.purchaseRequest.findMany({
     where: {
+      sellerId: userId,
       status: "PENDING",
-      items: {
-        path: "$[*].id",
-        array_contains: products.map(p => p.id),
-      },
     },
     include: {
       buyer: true,
+      product: {
+        include: {
+          prices: true,
+        },
+      },
+      price: true,
     },
     orderBy: {
       createdAt: "desc",
     },
-  });
+  }).then(requests => requests.map(request => ({
+    ...request,
+    product: {
+      ...request.product,
+      images: request.product.images as string[],
+    },
+  })));
 
   return (
     <div className="py-24">
@@ -53,7 +54,6 @@ export default async function PurchaseRequestsPage() {
             <PurchaseRequestCard
               key={request.id}
               request={request}
-              products={products}
             />
           ))}
         </div>

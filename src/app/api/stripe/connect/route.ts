@@ -14,7 +14,10 @@ export async function POST(req: Request) {
     const { accountId, url } = await createConnectAccount(userId, email);
     await prisma.user.update({
       where: { id: userId },
-      data: { stripeAccountId: accountId },
+      data: { 
+        stripeAccountId: accountId,
+        role: "ARTISAN",
+      },
     });
     return NextResponse.json({ url });
   } catch (error) {

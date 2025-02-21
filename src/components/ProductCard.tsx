@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useCart, formatPrice } from "@/lib/cart";
 import { Heart, ShoppingCart } from "lucide-react";
+import { toast } from "sonner";
 
 interface Price {
   id: string;
@@ -55,21 +56,71 @@ export function ProductCard({ product }: ProductCardProps) {
     return product.prices.find((p) => p.isDefault) || product.prices[0];
   }, [product.prices, product.currentMarketplaceId]);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!price) return;
 
-    dispatch({
-      type: "ADD_ITEM",
-      payload: {
-        id: product.id,
-        name: product.name,
-        price: price.unitAmount,
-        image: product.images && product.images[0] ? product.images[0] : "",
-        paymentStyle: price.paymentStyle,
-        sellerId: product.seller.id,
-        priceId: price.id,
-      },
-    });
+    // If it's a request-type product, create a purchase request first
+    if (price.paymentStyle === 'REQUEST') {
+      try {
+        const response = await fetch('/api/purchase-requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productId: product.id,
+            priceId: price.id,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create purchase request');
+        }
+
+        const purchaseRequest = await response.json();
+
+        try {
+          dispatch({
+            type: "ADD_ITEM",
+            payload: {
+              id: product.id,
+              name: product.name,
+              price: price.unitAmount,
+              image: product.images && product.images[0] ? product.images[0] : "",
+              paymentStyle: price.paymentStyle,
+              sellerId: product.seller.id,
+              priceId: price.id,
+              requestStatus: 'PENDING',
+              requestId: purchaseRequest.id,
+            },
+          });
+          toast.success('Purchase request created');
+        } catch (error: unknown) {
+          toast.error((error as Error).message || 'Cannot mix request and instant purchase items');
+        }
+      } catch (error) {
+        console.error('Error creating purchase request:', error);
+        toast.error('Failed to create purchase request');
+        return;
+      }
+    } else {
+      // Regular instant purchase
+      try {
+        dispatch({
+          type: "ADD_ITEM",
+          payload: {
+            id: product.id,
+            name: product.name,
+            price: price.unitAmount,
+            image: product.images && product.images[0] ? product.images[0] : "",
+            paymentStyle: price.paymentStyle,
+            sellerId: product.seller.id,
+            priceId: price.id,
+          },
+        });
+        toast.success('Added to cart');
+      } catch (error: unknown) {
+        toast.error((error as Error).message || 'Cannot mix request and instant purchase items');
+      }
+    }
   };
 
   const toggleFavorite = () => {

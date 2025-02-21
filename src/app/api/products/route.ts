@@ -2,7 +2,6 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
-import { Price } from "@prisma/client";
 
 export async function POST(req: Request) {
   const { userId } = await auth();
@@ -411,13 +410,20 @@ export async function PUT(req: Request) {
       }
 
       // Delete removed prices
-      const priceIdsToKeep = new Set(prices.map(p => p.id).filter(Boolean));
-      await prisma.price.deleteMany({
-        where: {
-          productId,
-          id: { notIn: Array.from(priceIdsToKeep) },
-        },
-      });
+      // Get all existing price IDs that should be kept
+      const existingPriceIds = prices
+        .map(p => p.id)
+        .filter((id): id is string => typeof id === 'string');
+
+      // Delete prices that aren't in the update
+      if (existingPriceIds.length > 0) {
+        await prisma.price.deleteMany({
+          where: {
+            productId,
+            id: { notIn: existingPriceIds },
+          },
+        });
+      }
     }
 
     return NextResponse.json(updatedProduct);

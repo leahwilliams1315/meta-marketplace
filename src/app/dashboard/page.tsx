@@ -14,26 +14,40 @@ type ProductWithPrices = Prisma.ProductGetPayload<{
 }>;
 import { ImageCarousel } from "@/components/ImageCarousel";
 import DeleteProductButton from "@/components/DeleteProductButton";
+import { MiniPurchaseRequestCard } from "@/components/MiniPurchaseRequestCard";
+import { ArrowRight } from "lucide-react";
 
 export default async function DashboardPage() {
   const getPendingRequestsCount = async (userId: string) => {
-    const products = await prisma.product.findMany({
-      where: { sellerId: userId },
-      select: { id: true },
-    });
-
-    // Get an array of product IDs
-    const productIds = products.map(p => p.id);
-
     return await prisma.purchaseRequest.count({
       where: {
+        sellerId: userId,
         status: "PENDING",
-        items: {
-          path: ["$[*]", "id"],
-          array_contains: productIds,
-        },
       },
     });
+  };
+
+  const getRecentRequests = async (userId: string) => {
+    return await prisma.purchaseRequest.findMany({
+      where: {
+        sellerId: userId,
+      },
+      include: {
+        buyer: true,
+        product: true,
+        price: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 3,
+    }).then(requests => requests.map(request => ({
+      ...request,
+      product: {
+        ...request.product,
+        images: request.product.images as string[],
+      },
+    })));
   };
 
   const { userId } = await auth();
@@ -43,7 +57,10 @@ export default async function DashboardPage() {
   }
 
   try {
-    const pendingRequestsCount = await getPendingRequestsCount(userId);
+    const [pendingRequestsCount, recentRequests] = await Promise.all([
+      getPendingRequestsCount(userId),
+      getRecentRequests(userId),
+    ]);
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -180,6 +197,41 @@ export default async function DashboardPage() {
                 </div>
               )}
             </div>
+
+            {/* Purchase Requests Section */}
+            {user.role === "ARTISAN" && (
+              <div className="mb-12">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold text-[#453E3E] flex items-center gap-3">
+                    Purchase Requests
+                    {pendingRequestsCount > 0 && (
+                      <Badge variant="default" className="bg-[#F97316]">
+                        {pendingRequestsCount} pending
+                      </Badge>
+                    )}
+                  </h2>
+                  <Link 
+                    href="/dashboard/purchase-requests"
+                    className="text-[#F97316] hover:text-[#EA580C] flex items-center gap-1 text-sm font-medium"
+                  >
+                    View all
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+                
+                {recentRequests.length > 0 ? (
+                  <div className="grid gap-4">
+                    {recentRequests.map((request) => (
+                      <MiniPurchaseRequestCard key={request.id} request={request} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    No purchase requests yet.
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Products Section */}
             <div>

@@ -15,17 +15,18 @@ enum UserRole {
 }
 
 model User {
-  id               String            @id
-  slug             String?           @unique
-  stripeAccountId  String?
-  role             UserRole          @default(CUSTOMER)
-  city             String? // For location-based filtering
-  marketplaces     Marketplace[]     @relation("MarketplaceOwners")
-  memberOf         Marketplace[]     @relation("MarketplaceMembers")
-  products         Product[]
-  purchaseRequests PurchaseRequest[] @relation("BuyerRequests")
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id                    String            @id
+  slug                  String?           @unique
+  stripeAccountId       String?
+  role                  UserRole          @default(CUSTOMER)
+  city                  String? // For location-based filtering
+  marketplaces          Marketplace[]     @relation("MarketplaceOwners")
+  memberOf              Marketplace[]     @relation("MarketplaceMembers")
+  products              Product[]
+  purchaseRequests      PurchaseRequest[] @relation("BuyerRequests")
+  receivedRequests      PurchaseRequest[] @relation("SellerRequests")
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 }
 
 model Marketplace {
@@ -58,6 +59,7 @@ model Product {
   seller          User     @relation(fields: [sellerId], references: [id])
   sellerId        String
   prices          Price[] // All prices associated with this product
+  requests        PurchaseRequest[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -81,6 +83,9 @@ model Price {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
 
+  // Purchase requests using this price
+  requests PurchaseRequest[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -99,8 +104,18 @@ model PurchaseRequest {
   id        String                @id @default(cuid())
   buyer     User                  @relation("BuyerRequests", fields: [buyerId], references: [id])
   buyerId   String
-  items     Json // Stored as JSON array of cart items
+  seller    User                  @relation("SellerRequests", fields: [sellerId], references: [id])
+  sellerId  String
+  product   Product               @relation(fields: [productId], references: [id])
+  productId String
+  price     Price                 @relation(fields: [priceId], references: [id])
+  priceId   String
   status    PurchaseRequestStatus @default(PENDING)
   createdAt DateTime              @default(now())
   updatedAt DateTime              @updatedAt
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([productId])
+  @@index([priceId])
 }

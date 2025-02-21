@@ -3,16 +3,6 @@ import { auth, clerkClient } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-  quantity: number;
-  paymentStyle: 'INSTANT' | 'REQUEST';
-}
-
-
 export async function POST(
   req: Request,
   { params }: { params: { id: string } }
@@ -28,30 +18,20 @@ export async function POST(
       where: { id: params.id },
       include: {
         buyer: true,
+        product: true,
+        price: true,
       },
     });
-
-    // Get the buyer's email from Clerk
-    const buyer = await clerk.users.getUser(purchaseRequest?.buyerId || '');
 
     if (!purchaseRequest) {
       return new NextResponse("Purchase request not found", { status: 404 });
     }
 
-    // Verify that the current user is the seller of at least one of the products
-    // First cast to unknown, then to CartItem[] since we know the JSON structure
-    const items = (purchaseRequest?.items as unknown as CartItem[]) || [];
-    
-    const products = await prisma.product.findMany({
-      where: {
-        id: {
-          in: items.map(item => item.id),
-        },
-      },
-    });
+    // Get the buyer's email from Clerk
+    const buyer = await clerk.users.getUser(purchaseRequest.buyerId);
 
-    const isSeller = products.some((product) => product.sellerId === userId);
-    if (!isSeller) {
+    // Verify that the current user is the seller
+    if (purchaseRequest.sellerId !== userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
@@ -62,17 +42,17 @@ export async function POST(
     });
 
     // Create a Stripe Checkout session for the approved request
-    const lineItems = items.map((item) => ({
+    const lineItems = [{
       price_data: {
         currency: "usd",
         product_data: {
-          name: item.name,
-          images: [item.image],
+          name: purchaseRequest.product.name,
+          images: purchaseRequest.product.images as string[],
         },
-        unit_amount: item.price,
+        unit_amount: purchaseRequest.price.unitAmount,
       },
-      quantity: item.quantity,
-    }));
+      quantity: 1,
+    }];
 
     const session = await stripe.checkout.sessions.create({
       customer_email: buyer.emailAddresses[0].emailAddress,

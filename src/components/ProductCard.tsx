@@ -36,9 +36,10 @@ interface ProductProps {
 
 interface ProductCardProps {
   product: ProductProps;
+  productLink?: string;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, productLink }: ProductCardProps) {
   const { dispatch } = useCart();
   const [isFavorite, setIsFavorite] = useState(false);
 
@@ -143,7 +144,9 @@ export function ProductCard({ product }: ProductCardProps) {
           />
         </div>
       )}
-      <h3 className="font-semibold mb-2 text-[#453E3E]">{product.name}</h3>
+      <Link href={productLink || `/user/${product.seller.slug || product.seller.id}/product/${product.id}`}>
+        <h3 className="font-semibold mb-2 text-[#453E3E]">{product.name}</h3>
+      </Link>
       <p className="text-muted-foreground text-sm mb-4">
         {product.description}
       </p>

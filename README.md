@@ -25,66 +25,119 @@ A platform for creating and managing artisan marketplaces, built with Next.js 14
 ### Database Schema (Prisma)
 
 ```prisma
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  CUSTOMER
+  ARTISAN
+  HOST
+}
+
 model User {
-  id              String        @id
-  stripeAccountId String?
-  role            UserRole     @default(CUSTOMER)
-  city            String?
-  marketplaces    Marketplace[] @relation("MarketplaceOwners")
-  memberOf        Marketplace[] @relation("MarketplaceMembers")
-  products        Product[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                    String            @id
+  slug                  String?           @unique
+  stripeAccountId       String?
+  role                  UserRole          @default(CUSTOMER)
+  city                  String? // For location-based filtering
+  marketplaces          Marketplace[]     @relation("MarketplaceOwners")
+  memberOf              Marketplace[]     @relation("MarketplaceMembers")
+  products              Product[]
+  purchaseRequests      PurchaseRequest[] @relation("BuyerRequests")
+  receivedRequests      PurchaseRequest[] @relation("SellerRequests")
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 }
 
 model Marketplace {
-  id          String     @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
-  slug        String     @unique
+  slug        String   @unique
   description String?
-  city        String?
-  type        String?
-  owners      User[]     @relation("MarketplaceOwners")
-  members     User[]     @relation("MarketplaceMembers")
-  products    Product[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  city        String? // If you want location-based searches on the marketplace
+  type        String? // e.g., "Pottery", "Jewelry", etc. for future
+  owners      User[]   @relation("MarketplaceOwners")
+  members     User[]   @relation("MarketplaceMembers")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  prices Price[]
+}
+
+enum PaymentStyle {
+  INSTANT // Immediate purchase
+  REQUEST // Requires merchant approval
 }
 
 model Product {
-  id            String      @id @default(cuid())
-  name          String
-  description   String
-  price         Int
-  images        Json
-  marketplace   Marketplace @relation(fields: [marketplaceId], references: [id])
-  marketplaceId String
-  seller        User        @relation(fields: [sellerId], references: [id])
-  sellerId      String
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id              String   @id @default(cuid())
+  name            String
+  description     String
+  images          Json     @default("[]")
+  stripeProductId String? // Stripe product identifier
+  totalQuantity   Int      @default(0)
+  seller          User     @relation(fields: [sellerId], references: [id])
+  sellerId        String
+  prices          Price[]
+  requests        PurchaseRequest[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([sellerId])
 }
 
-model PurchaseRequest {
-  id        String              @id @default(cuid())
-  status    PurchaseRequestStatus @default(PENDING)
-  buyer     User                  @relation(fields: [buyerId], references: [id])
-  buyerId   String
-  sellerId  String
-  product   Product               @relation(fields: [productId], references: [id])
+model Price {
+  id                String       @id @default(cuid())
+  stripePriceId     String
+  unitAmount        Int
+  currency          String
+  isDefault         Boolean      @default(false)
+  paymentStyle      PaymentStyle @default(INSTANT)
+  allocatedQuantity Int          @default(0)
+  marketplace   Marketplace? @relation(fields: [marketplaceId], references: [id])
+  marketplaceId String?
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
-  price     Price                 @relation(fields: [priceId], references: [id])
-  priceId   String
-  createdAt DateTime              @default(now())
-  updatedAt DateTime              @updatedAt
-  @@index([sellerId])
-  @@index([buyerId])
+  requests PurchaseRequest[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([marketplaceId])
+  @@index([productId])
 }
 
 enum PurchaseRequestStatus {
   PENDING
   APPROVED
   REJECTED
+  CANCELLED
+}
+
+model PurchaseRequest {
+  id        String                @id @default(cuid())
+  buyer     User                  @relation("BuyerRequests", fields: [buyerId], references: [id])
+  buyerId   String
+  seller    User                  @relation("SellerRequests", fields: [sellerId], references: [id])
+  sellerId  String
+  product   Product               @relation(fields: [productId], references: [id])
+  productId String
+  price     Price                 @relation(fields: [priceId], references: [id])
+  priceId   String
+  status    PurchaseRequestStatus @default(PENDING)
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([productId])
+  @@index([priceId])
 }
 ```
 

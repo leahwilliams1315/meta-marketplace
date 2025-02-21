@@ -205,6 +205,7 @@ export default async function MarketplacePage({
               ...product,
               currentMarketplaceId: typedMarketplace.id
             }}
+            productLink={`/marketplace/${slug}/product/${product.id}`}
           />
         ))}
       </div>

@@ -34,15 +34,16 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { productId: string } }
+  { params }: { params: Promise<{ productId: string }> }
 ) {
   const { userId } = await auth();
+  const { productId } = await params;
   if (!userId) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   const product = await prisma.product.findUnique({
-    where: { id: params.productId },
+    where: { id: productId },
   });
 
   if (!product) {

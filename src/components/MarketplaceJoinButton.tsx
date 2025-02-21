@@ -21,7 +21,7 @@ export function MarketplaceJoinButton({
   const handleToggleMembership = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/marketplaces/${marketplaceId}/membership`, {
+      const response = await fetch(`/api/marketplaces/${marketplaceId}/membership/`, {
         method: isMember ? "DELETE" : "POST",
         headers: {
           "Content-Type": "application/json",

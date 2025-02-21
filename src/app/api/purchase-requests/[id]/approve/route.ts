@@ -5,17 +5,18 @@ import { stripe } from "@/lib/stripe";
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
+    const { id } = await params;
     const clerk = await clerkClient();
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
     const purchaseRequest = await prisma.purchaseRequest.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         buyer: true,
         product: true,
@@ -37,7 +38,7 @@ export async function POST(
 
     // Update the purchase request status
     const updatedRequest = await prisma.purchaseRequest.update({
-      where: { id: params.id },
+      where: { id },
       data: { status: "APPROVED" },
     });
 

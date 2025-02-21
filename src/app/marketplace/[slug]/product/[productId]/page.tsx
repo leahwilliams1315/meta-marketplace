@@ -74,7 +74,7 @@ const socialFeatures = (product: any) => [
       <div className="absolute inset-0 opacity-10">
         <Image src={product.images[0]} alt={product.name} fill className="object-cover" />
       </div>
-    ) : null,
+    ) : <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-transparent opacity-50" />,
     className: "lg:col-start-1 lg:col-end-2 lg:row-start-1 lg:row-end-3",
     content: (
       <div className="relative z-10">
@@ -101,6 +101,7 @@ const socialFeatures = (product: any) => [
     description: "This piece is absolutely stunning! The craftsmanship is impeccable, and it's even more beautiful in person.",
     href: "#reviews",
     cta: "Read All Reviews",
+    background: <div className="absolute inset-0 bg-gradient-to-br from-yellow-50 to-transparent opacity-50" />,
     className: "lg:col-start-2 lg:col-end-3 lg:row-start-1 lg:row-end-2",
     content: (
       <div className="mt-4">
@@ -126,6 +127,7 @@ const socialFeatures = (product: any) => [
     description: "Join the conversation about this unique piece",
     href: "#comments",
     cta: "View All Comments",
+    background: <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-50" />,
     className: "lg:col-start-2 lg:col-end-3 lg:row-start-2 lg:row-end-4",
     content: (
       <div className="space-y-4 mt-4">
@@ -153,6 +155,7 @@ const socialFeatures = (product: any) => [
     description: "Discover more from this creator",
     href: `/user/${product.seller.slug}/collection`,
     cta: "View Collection",
+    background: <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-transparent opacity-50" />,
     className: "lg:col-start-3 lg:col-end-3 lg:row-start-1 lg:row-end-4",
     content: (
       <div className="space-y-4 mt-4">

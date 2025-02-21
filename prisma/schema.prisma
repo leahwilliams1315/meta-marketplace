@@ -15,17 +15,17 @@ enum UserRole {
 }
 
 model User {
-  id              String        @id
-  slug            String?       @unique
-  stripeAccountId String?
-  role            UserRole      @default(CUSTOMER)
-  city            String? // For location-based filtering
-  marketplaces    Marketplace[] @relation("MarketplaceOwners")
-  memberOf        Marketplace[] @relation("MarketplaceMembers")
-  products        Product[]
+  id               String            @id
+  slug             String?           @unique
+  stripeAccountId  String?
+  role             UserRole          @default(CUSTOMER)
+  city             String? // For location-based filtering
+  marketplaces     Marketplace[]     @relation("MarketplaceOwners")
+  memberOf         Marketplace[]     @relation("MarketplaceMembers")
+  products         Product[]
   purchaseRequests PurchaseRequest[] @relation("BuyerRequests")
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 model Marketplace {
@@ -94,11 +94,11 @@ enum PurchaseRequestStatus {
 }
 
 model PurchaseRequest {
-  id          String    @id @default(cuid())
-  buyer       User      @relation("BuyerRequests", fields: [buyerId], references: [id])
-  buyerId     String
-  items       Json      // Stored as JSON array of cart items
-  status      PurchaseRequestStatus @default(PENDING)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String                @id @default(cuid())
+  buyer     User                  @relation("BuyerRequests", fields: [buyerId], references: [id])
+  buyerId   String
+  items     Json // Stored as JSON array of cart items
+  status    PurchaseRequestStatus @default(PENDING)
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
 }

@@ -29,6 +29,9 @@ export default async function UserPage({
   const products = await prisma.product.findMany({
     where: { sellerId: user.id },
     orderBy: { createdAt: "desc" },
+    include: {
+      prices: true,
+    },
   });
 
   return (
@@ -64,6 +67,7 @@ export default async function UserPage({
             product={{
               ...product,
               images: product.images as string[],
+              prices: product.prices,
               seller: {
                 id: user.id,
                 slug: user.slug as string,

@@ -7,11 +7,35 @@ import StripeAccountCard from "@/components/StripeAccountCard";
 import { ProductSyncBadge } from "@/components/ProductSyncBadge";
 import { SyncAllProductsButton } from "@/components/SyncAllProductsButton";
 import { stripe } from "@/lib/stripe";
-import { Product } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+
+type ProductWithPrices = Prisma.ProductGetPayload<{
+  include: { prices: true };
+}>;
 import { ImageCarousel } from "@/components/ImageCarousel";
 import DeleteProductButton from "@/components/DeleteProductButton";
 
 export default async function DashboardPage() {
+  const getPendingRequestsCount = async (userId: string) => {
+    const products = await prisma.product.findMany({
+      where: { sellerId: userId },
+      select: { id: true },
+    });
+
+    // Get an array of product IDs
+    const productIds = products.map(p => p.id);
+
+    return await prisma.purchaseRequest.count({
+      where: {
+        status: "PENDING",
+        items: {
+          path: ["$[*]", "id"],
+          array_contains: productIds,
+        },
+      },
+    });
+  };
+
   const { userId } = await auth();
 
   if (!userId) {
@@ -19,13 +43,17 @@ export default async function DashboardPage() {
   }
 
   try {
+    const pendingRequestsCount = await getPendingRequestsCount(userId);
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        products: true,
+        products: {
+          include: {
+            prices: true,
+          },
+        },
         memberOf: true,
         marketplaces: true,
-        // Ensure stripeAccountId is included
       },
     });
 
@@ -40,7 +68,7 @@ export default async function DashboardPage() {
     const { products } = user;
 
     // Fetch all Stripe products and zip them with local products
-    let enhancedProducts: (Product & { isSynced?: boolean })[] = products;
+    let enhancedProducts: (ProductWithPrices & { isSynced?: boolean })[] = products as ProductWithPrices[];
     if (user.stripeAccountId) {
       const stripeProductsResponse = await stripe.products.list(
         { limit: 100 },
@@ -77,6 +105,28 @@ export default async function DashboardPage() {
                 initialStripeAccountId={user.stripeAccountId}
               />
             </div>
+
+            {/* Purchase Requests Section */}
+            {user.role === "ARTISAN" && (
+              <div className="mb-12">
+                <h2 className="text-xl font-semibold text-[#453E3E] mb-6 flex items-center gap-3">
+                  Purchase Requests
+                  {pendingRequestsCount > 0 && (
+                    <Badge variant="default" className="bg-[#453E3E]">
+                      {pendingRequestsCount} pending
+                    </Badge>
+                  )}
+                </h2>
+                <div className="bg-white rounded-lg border border-[#E5E5E5] p-6">
+                  <Link
+                    href="/dashboard/purchase-requests"
+                    className="block text-center py-4 px-6 bg-[#453E3E] text-white rounded-lg hover:bg-[#2A2424] transition-colors"
+                  >
+                    View Purchase Requests
+                  </Link>
+                </div>
+              </div>
+            )}
 
             {/* Marketplaces Section */}
             <div className="mb-12">
@@ -202,7 +252,7 @@ export default async function DashboardPage() {
                         </div>
                         <div className="p-3">
                           <p className="font-bold text-[#453E3E] text-base">
-                            ${(product.price / 100).toFixed(2)}
+                            ${(product.prices?.[0]?.unitAmount || 0 / 100).toFixed(2)}
                           </p>
                           <Link
                             href={`/create-product?productId=${product.id}`}

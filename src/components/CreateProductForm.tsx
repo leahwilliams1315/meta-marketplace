@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { CldUploadWidget } from "next-cloudinary";
+import { PriceList, type Price } from "./PriceList";
 
 interface Marketplace {
   id: string;
@@ -12,9 +13,9 @@ interface Marketplace {
 interface Product {
   name: string;
   description: string;
-  price: number;
   images: string[];
   marketplaceId: string;
+  prices: Price[];
 }
 
 interface CreateProductFormProps {
@@ -32,8 +33,14 @@ export const CreateProductForm = ({
   const [description, setDescription] = useState(
     initialData?.description || ""
   );
-  const [price, setPrice] = useState(
-    initialData ? initialData.price.toString() : "0"
+  const [prices, setPrices] = useState<Price[]>(
+    initialData?.prices || [{
+      unitAmount: 0,
+      currency: "USD",
+      isDefault: true,
+      paymentStyle: "INSTANT",
+      allocatedQuantity: 1
+    }]
   );
   const [images, setImages] = useState<string[]>(initialData?.images || []);
   const [selectedMarketplaceId, setSelectedMarketplaceId] = useState(
@@ -47,7 +54,7 @@ export const CreateProductForm = ({
     if (initialData) {
       setName(initialData.name);
       setDescription(initialData.description);
-      setPrice(initialData.price.toString());
+      setPrices(initialData.prices);
       setImages(initialData.images);
       setSelectedMarketplaceId(initialData.marketplaceId);
     }
@@ -58,12 +65,23 @@ export const CreateProductForm = ({
     setLoading(true);
     setError("");
     try {
+      // Validate that we have at least one price
+      if (prices.length === 0) {
+        throw new Error("Please add at least one price");
+      }
+      
+      // Validate that we have exactly one default price
+      const defaultPrices = prices.filter(p => p.isDefault);
+      if (defaultPrices.length !== 1) {
+        throw new Error("Please set exactly one default price");
+      }
+
       await onSubmitForm({
         name,
         description,
-        price: parseInt(price, 10),
         images,
         marketplaceId: selectedMarketplaceId,
+        prices,
       });
     } catch (err: unknown) {
       setError((err as Error).message);
@@ -124,13 +142,13 @@ export const CreateProductForm = ({
         />
       </div>
       <div>
-        <label className="block mb-1 font-medium">Price (in cents)</label>
-        <input
-          className="input w-full"
-          type="number"
-          min="0"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
+        <label className="block mb-2 text-sm font-medium text-[#453E3E]">
+          Prices
+        </label>
+        <PriceList
+          prices={prices}
+          onChange={setPrices}
+          className="mb-6"
           disabled={loading}
         />
       </div>

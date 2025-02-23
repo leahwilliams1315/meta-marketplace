@@ -47,9 +47,14 @@ export default function CreateProductContent() {
     if (productId) {
       // If editing, fetch the product details
       async function fetchProduct() {
-        const res = await fetch(`/api/products/${productId}`);
-        if (res.ok) {
-          const data = await res.json();
+        const [productRes, tagsRes] = await Promise.all([
+          fetch(`/api/products/${productId}`),
+          fetch(`/api/products/${productId}/tags`)
+        ]);
+
+        if (productRes.ok && tagsRes.ok) {
+          const data = await productRes.json();
+          const tags = await tagsRes.json();
           setInitialData({
             name: data.name,
             description: data.description,
@@ -63,10 +68,7 @@ export default function CreateProductContent() {
               allocatedQuantity: p.allocatedQuantity,
               marketplaceId: p.marketplaceId
             })),
-            tags: data.tags?.map((tag: { id: number; name: string }) => ({
-              value: tag.id.toString(),
-              label: tag.name
-            })) || []
+            tags: tags
           });
         }
       }

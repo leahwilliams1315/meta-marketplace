@@ -10,10 +10,14 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { name, description, images, prices }: {
+    const { name, description, images, prices, tags }: {
       name: string;
       description?: string;
       images?: string[];
+      tags?: Array<{
+        id: number;
+        name: string;
+      }>;
       prices: Array<{
         unitAmount: number;
         currency: string;
@@ -136,6 +140,15 @@ export async function POST(req: Request) {
               marketplaceId: price.marketplaceId,
             })),
           },
+          ProductTag: tags ? {
+            create: tags.map(tag => ({
+              tag: {
+                connect: {
+                  id: tag.id
+                }
+              }
+            }))
+          } : undefined,
         },
         include: {
           prices: true,
@@ -181,11 +194,15 @@ export async function PUT(req: Request) {
   }
 
   try {
-    const { productId, name, description, images, prices }: {
+    const { productId, name, description, images, prices, tags }: {
       productId: string;
       name: string;
       description?: string;
       images?: string[];
+      tags?: Array<{
+        id: number;
+        name: string;
+      }>;
       prices: Array<{
         id?: string;
         unitAmount: number;
@@ -197,11 +214,16 @@ export async function PUT(req: Request) {
       }>;
     } = await req.json();
 
-    // Get the existing product with its prices
+    // Get the existing product with its prices and tags
     const existingProduct = await prisma.product.findUnique({
       where: { id: productId },
       include: {
         prices: true,
+        ProductTag: {
+          include: {
+            tag: true
+          }
+        }
       },
     });
     
@@ -283,6 +305,22 @@ export async function PUT(req: Request) {
             where: { id: productId },
             data: { stripeProductId: stripeProduct.id },
             include: { prices: true },
+          });
+        }
+
+        // Handle tags if provided
+        if (tags) {
+          // Delete existing tags
+          await prisma.productTag.deleteMany({
+            where: { productId }
+          });
+          
+          // Create new tag associations
+          await prisma.productTag.createMany({
+            data: tags.map(tag => ({
+              productId,
+              tagId: tag.id
+            }))
           });
         }
 
@@ -379,7 +417,24 @@ export async function PUT(req: Request) {
         console.error("Stripe sync error:", stripeError);
       }
     } else {
-      // No Stripe account, just update prices in database
+      // No Stripe account, just update prices and tags in database
+      
+      // First, handle tags if provided
+      if (tags) {
+        // Delete existing tags
+        await prisma.productTag.deleteMany({
+          where: { productId }
+        });
+        
+        // Create new tag associations
+        await prisma.productTag.createMany({
+          data: tags.map(tag => ({
+            productId,
+            tagId: tag.id
+          }))
+        });
+      }
+      
       // Update existing prices
       for (const price of prices) {
         if (price.id) {

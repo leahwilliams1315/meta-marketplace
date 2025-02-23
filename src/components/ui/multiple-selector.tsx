@@ -481,6 +481,7 @@ const MultipleSelector = React.forwardRef<MultipleSelectorRef, MultipleSelectorP
                 <Badge
                   key={option.value}
                   className={cn(
+                    'hover:bg-primary/90 hover:text-primary hover:ring-2 hover:ring-primary',
                     'data-[disabled]:bg-muted-foreground data-[disabled]:text-muted data-[disabled]:hover:bg-muted-foreground',
                     'data-[fixed]:bg-muted-foreground data-[fixed]:text-muted data-[fixed]:hover:bg-muted-foreground',
                     badgeClassName,
@@ -491,6 +492,7 @@ const MultipleSelector = React.forwardRef<MultipleSelectorRef, MultipleSelectorP
                   {option.label}
                   <button
                     className={cn(
+                      'hover:bg-primary/90 hover:text-primary hover:ring-1 hover:ring-[hsl(14,70%,55%)]',
                       'ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2',
                       (disabled || option.fixed) && 'hidden',
                     )}
@@ -505,7 +507,7 @@ const MultipleSelector = React.forwardRef<MultipleSelectorRef, MultipleSelectorP
                     }}
                     onClick={() => handleUnselect(option)}
                   >
-                    <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                    <X className="h-3 w-3 text-muted-foreground hover:font-medium hover:stroke-[hsl(14,70%,55%)]" />
                   </button>
                 </Badge>
               );
@@ -589,7 +591,7 @@ const MultipleSelector = React.forwardRef<MultipleSelectorRef, MultipleSelectorP
 
           {open && Object.values(selectables).flat().length > 0 && (
             <CommandList
-              className="absolute top-1 z-10 w-full rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in"
+              className="absolute top-1 z-10 w-full rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in overflow-hidden"
               onMouseLeave={() => {
                 setOnScrollbar(false);
               }}
@@ -608,7 +610,7 @@ const MultipleSelector = React.forwardRef<MultipleSelectorRef, MultipleSelectorP
                   {CreatableItem()}
                   {!selectFirstItem && <CommandItem value="-" className="hidden" />}
                   {Object.entries(selectables).map(([key, dropdowns]) => (
-                    <CommandGroup key={key} heading={key} className="h-full overflow-auto">
+                    <CommandGroup key={key} heading={key} className="h-full overflow-auto p-0">
                       <>
                         {dropdowns.map((option) => (
                           <CommandItem
@@ -630,7 +632,7 @@ const MultipleSelector = React.forwardRef<MultipleSelectorRef, MultipleSelectorP
                               onChange?.(newOptions);
                             }}
                             className={cn(
-                              'cursor-pointer',
+                              'cursor-pointer data-[selected=true]:bg-blue-50 data-[selected=true]:text-blue-900 px-8 py-3',
                               option.disable && 'cursor-default text-muted-foreground',
                             )}
                           >

@@ -46,7 +46,7 @@ export const CreateProductForm = ({
     }]
   );
   const [images, setImages] = useState<string[]>(initialData?.images || []);
-  const [selectedTags, setSelectedTags] = useState<Option[]>(initialData?.tags || []);
+  const [selectedTags, setSelectedTags] = useState<Option[]>([]);
   const [error, setError] = useState("");
   const queryClient = useQueryClient();
 
@@ -72,7 +72,7 @@ export const CreateProductForm = ({
       setDescription(initialData.description);
       setPrices(initialData.prices);
       setImages(initialData.images);
-      setSelectedTags(initialData.tags);
+      setSelectedTags(initialData.tags || []);
     }
   }, [initialData]);
 
@@ -131,6 +131,7 @@ export const CreateProductForm = ({
   }
 
 
+  debugger;
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       {error && (
@@ -243,10 +244,10 @@ export const CreateProductForm = ({
       <div className="my-4 w-[300px]">
         <label htmlFor="tags" className="block text-sm font-medium text-gray-700">Tags</label>
         <MultipleSelector
-          value={selectedTags}
           placeholder="Select tags..."
           defaultOptions={availableTags}
           groupBy="category"
+          value={selectedTags}
           onChange={setSelectedTags}
           minCharactersForAddNew={3}
           createNewPrompt="Press Enter to add as new tag"

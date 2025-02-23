@@ -3,6 +3,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { CartProvider } from "@/lib/cart";
 import { NavBar } from "@/components/navbar";
 import { Inter } from "next/font/google";
+import { QueryProvider } from "@/lib/providers/query-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,12 +25,14 @@ export default function RootLayout({
         <body
           className={`${inter.className} min-h-screen flex flex-col bg-background text-foreground font-body`}
         >
-          <CartProvider>
-            <NavBar />
-            <main className="flex-1 container mx-auto px-6 py-8">
-              {children}
-            </main>
-          </CartProvider>
+          <QueryProvider>
+            <CartProvider>
+              <NavBar />
+              <main className="flex-1 container mx-auto px-6 py-8">
+                {children}
+              </main>
+            </CartProvider>
+          </QueryProvider>
         </body>
       </html>
     </FixedClerkProvider>

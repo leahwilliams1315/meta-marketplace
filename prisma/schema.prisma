@@ -1,11 +1,14 @@
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  directUrl         = env("DIRECT_URL")
+  extensions        = [pgvector(map: "vector", schema: "extensions")]
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 enum UserRole {
@@ -15,18 +18,18 @@ enum UserRole {
 }
 
 model User {
-  id                    String            @id
-  slug                  String?           @unique
-  stripeAccountId       String?
-  role                  UserRole          @default(CUSTOMER)
-  city                  String? // For location-based filtering
-  marketplaces          Marketplace[]     @relation("MarketplaceOwners")
-  memberOf              Marketplace[]     @relation("MarketplaceMembers")
-  products              Product[]
-  purchaseRequests      PurchaseRequest[] @relation("BuyerRequests")
-  receivedRequests      PurchaseRequest[] @relation("SellerRequests")
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  id               String            @id
+  slug             String?           @unique
+  stripeAccountId  String?
+  role             UserRole          @default(CUSTOMER)
+  city             String? // For location-based filtering
+  marketplaces     Marketplace[]     @relation("MarketplaceOwners")
+  memberOf         Marketplace[]     @relation("MarketplaceMembers")
+  products         Product[]
+  purchaseRequests PurchaseRequest[] @relation("BuyerRequests")
+  receivedRequests PurchaseRequest[] @relation("SellerRequests")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 model Marketplace {
@@ -42,6 +45,8 @@ model Marketplace {
   updatedAt   DateTime @updatedAt
 
   prices Price[]
+
+  MarketplaceTag MarketplaceTag[]
 }
 
 enum PaymentStyle {
@@ -50,18 +55,19 @@ enum PaymentStyle {
 }
 
 model Product {
-  id              String   @id @default(cuid())
+  id              String            @id @default(cuid())
   name            String
   description     String
-  images          Json     @default("[]")
+  images          Json              @default("[]")
   stripeProductId String? // Stripe product identifier
-  totalQuantity   Int      @default(0) // Total available inventory across all prices
-  seller          User     @relation(fields: [sellerId], references: [id])
+  totalQuantity   Int               @default(0) // Total available inventory across all prices
+  seller          User              @relation(fields: [sellerId], references: [id])
   sellerId        String
   prices          Price[] // All prices associated with this product
   requests        PurchaseRequest[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  ProductTag      ProductTag[]
 
   @@index([sellerId])
 }
@@ -118,4 +124,65 @@ model PurchaseRequest {
   @@index([sellerId])
   @@index([productId])
   @@index([priceId])
+}
+
+// ------------------------------
+// Tagging System Models
+// ------------------------------
+
+model Tag {
+  id         Int                          @id @default(autoincrement())
+  name       String                       @unique
+  embedding  Unsupported("vector(1536)")?
+  createdBy  String?
+  createdAt  DateTime                     @default(now())
+  status     String                       @default("active")
+  usageCount Int                          @default(0)
+
+  productTags     ProductTag[]
+  marketplaceTags MarketplaceTag[]
+  postTags        PostTag[]
+}
+
+model ProductTag {
+  productId  String
+  tagId      Int
+  assignedAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([productId, tagId])
+}
+
+model MarketplaceTag {
+  marketplaceId String
+  tagId         Int
+  assignedAt    DateTime @default(now())
+
+  marketplace Marketplace @relation(fields: [marketplaceId], references: [id], onDelete: Cascade)
+  tag         Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([marketplaceId, tagId])
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  title     String
+  content   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  postTags PostTag[]
+}
+
+model PostTag {
+  postId     String
+  tagId      Int
+  assignedAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
 }

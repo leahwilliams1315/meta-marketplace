@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { CldUploadWidget } from "next-cloudinary";
 import { PriceList, type Price } from "./PriceList";
 import Image from "next/image";
+import { MultipleSelector, type Option } from '@/components/ui/multiple-selector';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface Marketplace {
   id: string;
@@ -16,6 +18,7 @@ interface Product {
   description: string;
   images: string[];
   prices: Price[];
+  tags: Option[];
 }
 
 interface CreateProductFormProps {
@@ -43,8 +46,23 @@ export const CreateProductForm = ({
     }]
   );
   const [images, setImages] = useState<string[]>(initialData?.images || []);
-
+  const [selectedTags, setSelectedTags] = useState<Option[]>(initialData?.tags || []);
   const [error, setError] = useState("");
+  const queryClient = useQueryClient();
+
+  // Fetch all available tags using React Query
+  const { data: availableTags = [] } = useQuery({
+    queryKey: ['tags'],
+    queryFn: async () => {
+      const res = await fetch('/api/tags');
+      if (!res.ok) throw new Error('Failed to fetch tags');
+      const tags = await res.json();
+      return tags.map((tag: { id: number; name: string }) => ({
+        value: tag.id.toString(),
+        label: tag.name
+      }));
+    }
+  });
   const [loading, setLoading] = useState(false);
 
 
@@ -54,7 +72,7 @@ export const CreateProductForm = ({
       setDescription(initialData.description);
       setPrices(initialData.prices);
       setImages(initialData.images);
-
+      setSelectedTags(initialData.tags);
     }
   }, [initialData]);
 
@@ -103,6 +121,7 @@ export const CreateProductForm = ({
         description,
         images,
         prices,
+        tags: selectedTags,
       });
     } catch (err: unknown) {
       setError((err as Error).message);
@@ -112,13 +131,12 @@ export const CreateProductForm = ({
   }
 
 
-
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       {error && (
         <div className="bg-red-50 text-red-700 px-4 py-3 rounded-md text-sm">
-          {error}
-        </div>
+        {error}
+      </div>
       )}
 
       <div>
@@ -221,6 +239,44 @@ export const CreateProductForm = ({
             </div>
           )}
         </div>
+      </div>
+      <div className="my-4 w-[300px]">
+        <label htmlFor="tags" className="block text-sm font-medium text-gray-700">Tags</label>
+        <MultipleSelector
+          value={selectedTags}
+          placeholder="Select tags..."
+          defaultOptions={availableTags}
+          groupBy="category"
+          onChange={setSelectedTags}
+          minCharactersForAddNew={3}
+          createNewPrompt="Press Enter to add as new tag"
+          onCreateNew={async (value) => {
+            try {
+              const res = await fetch('/api/tags', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: value, createdBy: 'system' })
+              });
+              const tag = await res.json();
+              
+              if (res.status === 201) {
+                // Add the new tag to selected tags
+                setSelectedTags((prev) => [...prev, { 
+                  value: tag.id.toString(), 
+                  label: tag.name 
+                }]);
+                
+                // Invalidate the tags query to trigger a refresh
+                await queryClient.invalidateQueries({ queryKey: ['tags'] });
+              } else {
+                alert(tag.error || 'Error creating tag');
+              }
+            } catch (error) {
+              console.error(error);
+              alert('Error creating tag');
+            }
+          }}
+        />
       </div>
       <button type="submit" className="btn btn-primary" disabled={loading}>
         {loading

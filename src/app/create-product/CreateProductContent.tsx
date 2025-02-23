@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CreateProductForm } from "@/components/CreateProductForm";
+import { type Option } from '@/components/ui/multiple-selector';
 
 interface Price {
   id?: string;
@@ -19,6 +20,7 @@ interface Product {
   description: string;
   images: string[];
   prices: Price[];
+  tags: Option[];
 }
 
 export default function CreateProductContent() {
@@ -60,7 +62,11 @@ export default function CreateProductContent() {
               paymentStyle: p.paymentStyle,
               allocatedQuantity: p.allocatedQuantity,
               marketplaceId: p.marketplaceId
-            }))
+            })),
+            tags: data.tags?.map((tag: { id: number; name: string }) => ({
+              value: tag.id.toString(),
+              label: tag.name
+            })) || []
           });
         }
       }
@@ -73,6 +79,18 @@ export default function CreateProductContent() {
     const method = productId ? "PUT" : "POST";
     const body = productId ? { productId, ...formData } : formData;
     
+    // Keep the tags in Option format for the form data
+    body.tags = formData.tags;
+    
+    // Transform tags to API format just for the request
+    const requestBody = {
+      ...body,
+      tags: formData.tags.map(tag => ({
+        id: parseInt(tag.value),
+        name: tag.label
+      }))
+    };
+    
     // Ensure at least one price is marked as default
     if (!formData.prices.some(p => p.isDefault)) {
       console.error("At least one price must be marked as default");
@@ -82,7 +100,7 @@ export default function CreateProductContent() {
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(requestBody),
     });
     if (res.ok) {
       router.push("/dashboard");

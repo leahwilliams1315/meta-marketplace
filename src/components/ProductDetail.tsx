@@ -37,7 +37,7 @@ interface ProductDetailProps {
   marketplaceSlug?: string;
 }
 
-const ProductDetail: React.FC<ProductDetailProps> = ({ product, marketplaceSlug }) => {
+const ProductDetail: React.FC<ProductDetailProps> = ({ product }) => {
   const { dispatch } = useCart();
   const [isFavorite, setIsFavorite] = React.useState(false);
 

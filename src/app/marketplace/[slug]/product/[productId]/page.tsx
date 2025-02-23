@@ -11,10 +11,10 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { PaymentStyle } from '@prisma/client';
 
 interface PageProps {
-  params: {
+  params: Promise<{
     slug: string;
     productId: string;
-  };
+  }>;
 }
 
 async function fetchProduct(productId: string, marketplaceSlug: string) {
@@ -176,8 +176,9 @@ const socialFeatures = (product: any) => [
   }
 ];
 
-const MarketplaceProductPage = async ({ params: { slug, productId } }: PageProps) => {
+const MarketplaceProductPage = async ({ params }: PageProps) => {
   const { userId } = await auth();
+  const { productId, slug } = await params;
   if (!userId) {
     redirect("/sign-in");
   }

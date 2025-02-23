@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 
 export async function GET(
   req: Request,
-  { params }: { params: { productId: string } }
+  { params }: { params: Promise<{ productId: string }> }
 ) {
   const { userId } = await auth();
   if (!userId) {
@@ -12,7 +12,7 @@ export async function GET(
   }
 
   try {
-    const { productId } = params;
+    const { productId } = await params;
 
     const productTags = await prisma.productTag.findMany({
       where: { productId },

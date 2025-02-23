@@ -10,7 +10,14 @@ import { stripe } from "@/lib/stripe";
 import { Prisma } from "@prisma/client";
 
 type ProductWithPrices = Prisma.ProductGetPayload<{
-  include: { prices: true };
+  include: { 
+    prices: true;
+    ProductTag: {
+      include: {
+        tag: true
+      }
+    }
+  };
 }>;
 import { ImageCarousel } from "@/components/ImageCarousel";
 import DeleteProductButton from "@/components/DeleteProductButton";
@@ -67,6 +74,11 @@ export default async function DashboardPage() {
         products: {
           include: {
             prices: true,
+            ProductTag: {
+              include: {
+                tag: true
+              }
+            }
           },
         },
         memberOf: true,
@@ -268,22 +280,37 @@ export default async function DashboardPage() {
                     {enhancedProducts.map((product) => (
                       <div
                         key={product.id}
-                        className="bg-white rounded-lg border border-[#E5E5E5] p-6 flex flex-col"
+                        className="bg-white rounded-lg border border-[#E5E5E5] p-5 flex flex-col gap-3"
                       >
-                        <div className="flex justify-between items-center">
-                          <h3 className="text-lg font-semibold text-[#453E3E]">
-                            {product.name}
-                          </h3>
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-[#453E3E] mb-1.5">
+                              {product.name}
+                            </h3>
+                            <p className="text-[#666666] text-sm line-clamp-2">
+                              {product.description}
+                            </p>
+                          </div>
                           <DeleteProductButton
                             productId={product.id}
                             stripeProductId={product.stripeProductId}
                           />
                         </div>
-                        <p className="text-[#666666] text-sm mt-2">
-                          {product.description}
-                        </p>
+                        {product.ProductTag && product.ProductTag.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {product.ProductTag.map((pt) => (
+                              <Badge
+                                key={pt.tag.id}
+                                variant="secondary"
+                                className="bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs py-0.5"
+                              >
+                                {pt.tag.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                         <div className="relative">
-                          <div className="aspect-square rounded-t-lg overflow-hidden">
+                          <div className="aspect-[4/3] rounded-lg overflow-hidden">
                             <ImageCarousel
                               images={
                                 Array.isArray(product.images)
@@ -302,7 +329,7 @@ export default async function DashboardPage() {
                             />
                           </div>
                         </div>
-                        <div className="p-3">
+                        <div className="pt-2">
                           <p className="font-bold text-[#453E3E] text-base">
                             ${((product.prices?.[0]?.unitAmount / 100) || 0 / 100).toFixed(2)}
                           </p>

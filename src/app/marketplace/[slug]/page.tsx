@@ -5,23 +5,49 @@ import type { User as ClerkUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { ProductCard } from "@/components/ProductCard";
-import type { Marketplace, Product, User } from "@prisma/client";
+import type { PaymentStyle } from '@prisma/client';
 
-import { PaymentStyle } from '@prisma/client';
+type ClerkUserData = {
+  name: string;
+  imageUrl: string;
+};
 
-interface ProductProps {
+type RawQueryResult = {
   id: string;
   name: string;
   description: string;
   images: string[];
   stripeProductId: string | null;
   totalQuantity: number;
-  seller: {
-    id: string;
-    slug: string | null;
-    name?: string;
-    imageUrl?: string;
-  };
+  sellerId: string;
+  price_id: string;
+  stripePriceId: string;
+  unitAmount: number;
+  currency: string;
+  isDefault: boolean;
+  paymentStyle: PaymentStyle;
+  allocatedQuantity: number;
+  marketplaceId: string;
+  seller_slug: string | null;
+  tags: Array<{
+    tagId: number;
+    tagName: string;
+  }> | null;
+};
+
+type ProductWithTags = {
+  id: string;
+  name: string;
+  description: string;
+  images: string[];
+  stripeProductId: string | null;
+  totalQuantity: number;
+  productTags: Array<{
+    tag: {
+      id: number;
+      name: string;
+    };
+  }>;
   prices: Array<{
     id: string;
     unitAmount: number;
@@ -31,42 +57,13 @@ interface ProductProps {
     allocatedQuantity: number;
     marketplaceId: string | null;
   }>;
-  currentMarketplaceId?: string;
-}
-
-type DbPrice = {
-  id: string;
-  stripePriceId: string;
-  unitAmount: number;
-  currency: string;
-  isDefault: boolean;
-  paymentStyle: PaymentStyle;
-  allocatedQuantity: number;
-  marketplaceId: string | null;
-  product: Product & {
-    seller: User;
-    prices: Array<{
-      id: string;
-      stripePriceId: string;
-      unitAmount: number;
-      currency: string;
-      isDefault: boolean;
-      paymentStyle: PaymentStyle;
-      allocatedQuantity: number;
-      marketplaceId: string | null;
-    }>;
+  seller: {
+    id: string;
+    slug: string | null;
+    name?: string;
+    imageUrl?: string;
   };
-};
-
-type MarketplaceWithRelations = Marketplace & {
-  prices: DbPrice[];
-  owners: User[];
-  members: User[];
-};
-
-type ClerkUserData = {
-  name: string;
-  imageUrl: string;
+  currentMarketplaceId?: string;
 };
 
 export default async function MarketplacePage({
@@ -80,23 +77,67 @@ export default async function MarketplacePage({
     redirect("/sign-in");
   }
 
+  // First get the marketplace details
   const marketplace = await prisma.marketplace.findUnique({
     where: { slug },
     include: {
-      prices: {
-        include: {
-          product: {
-            include: {
-              seller: true,
-              prices: true,
-            }
-          }
+      owners: {
+        select: {
+          id: true,
         }
       },
-      owners: true,
-      members: true,
+      members: {
+        select: {
+          id: true,
+        }
+      },
     },
   });
+
+  type MarketplaceWithMembers = {
+    id: string;
+    name: string;
+    description: string | null;
+    owners: Array<{ id: string }>;
+    members: Array<{ id: string }>;
+  };
+
+  if (!marketplace) return null;
+
+  const typedMarketplace = marketplace as MarketplaceWithMembers;
+
+  // Then get all products with their prices, tags, and seller info in one efficient query
+  const productsWithDetails = await prisma.$queryRaw`
+    SELECT DISTINCT ON (p.id)
+      p.id,
+      p.name,
+      p.description,
+      p.images,
+      p."stripeProductId",
+      p."totalQuantity",
+      p."sellerId",
+      pr.id as price_id,
+      pr."stripePriceId",
+      pr."unitAmount",
+      pr.currency,
+      pr."isDefault",
+      pr."paymentStyle",
+      pr."allocatedQuantity",
+      pr."marketplaceId",
+      u.slug as seller_slug,
+      json_agg(DISTINCT jsonb_build_object(
+        'tagId', t.id,
+        'tagName', t.name
+      )) FILTER (WHERE t.id IS NOT NULL) as tags
+    FROM "Product" p
+    INNER JOIN "Price" pr ON pr."productId" = p.id
+    LEFT JOIN "ProductTag" pt ON pt."productId" = p.id
+    LEFT JOIN "Tag" t ON t.id = pt."tagId"
+    LEFT JOIN "User" u ON u.id = p."sellerId"
+    WHERE pr."marketplaceId" = ${typedMarketplace.id}
+    GROUP BY p.id, pr.id, u.slug
+    ORDER BY p.id, pr."isDefault" DESC
+  `;
 
   if (!marketplace) {
     return (
@@ -112,7 +153,7 @@ export default async function MarketplacePage({
 
   // Fetch Clerk user information for all sellers
   const sellerIds = [
-    ...new Set(marketplace.prices.map((price) => price.product.sellerId)),
+    ...new Set((productsWithDetails as RawQueryResult[]).map(p => p.sellerId))
   ];
   const clerk = await clerkClient();
   const clerkUsers = await Promise.all(
@@ -130,46 +171,64 @@ export default async function MarketplacePage({
     ])
   );
 
-  const typedMarketplace = marketplace as MarketplaceWithRelations;
   const isOwner = typedMarketplace.owners.some((owner) => owner.id === userId);
   const isMember = typedMarketplace.members.some(
     (member) => member.id === userId
   );
 
-  // Get unique products and enhance them with Clerk user data
-  const uniqueProducts: ProductProps[] = Array.from(
-    new Map(
-      typedMarketplace.prices.map(price => [
-        price.product.id,
-        {
-          id: price.product.id,
-          name: price.product.name,
-          description: price.product.description,
-          images: price.product.images as string[],
-          stripeProductId: price.product.stripeProductId,
-          totalQuantity: price.product.totalQuantity,
-          prices: typedMarketplace.prices
-            .filter(p => p.product.id === price.product.id)
-            .map(p => ({
-              id: p.id,
-              unitAmount: p.unitAmount,
-              currency: p.currency,
-              isDefault: p.isDefault,
-              paymentStyle: p.paymentStyle,
-              allocatedQuantity: p.allocatedQuantity,
-              marketplaceId: p.marketplaceId,
-            })),
-          seller: {
-            id: price.product.seller.id,
-            slug: price.product.seller.slug,
-            name: userMap.get(price.product.seller.id)?.name || "Anonymous",
-            imageUrl: userMap.get(price.product.seller.id)?.imageUrl,
-          },
-          currentMarketplaceId: typedMarketplace.id
-        }
-      ])
-    ).values()
-  );
+  // Get unique products from our raw query results
+  const productsMap = new Map<string, ProductWithTags>();
+  for (const row of productsWithDetails as RawQueryResult[]) {
+    const productId = row.id;
+    if (!productsMap.has(productId)) {
+      productsMap.set(productId, {
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        images: row.images as string[],
+        stripeProductId: row.stripeProductId,
+        totalQuantity: row.totalQuantity,
+        productTags: row.tags && row.tags[0]?.tagId ? row.tags.map(tag => ({
+          tag: {
+            id: tag.tagId,
+            name: tag.tagName
+          }
+        })) : [],
+        prices: [{
+          id: row.price_id,
+          unitAmount: row.unitAmount,
+          currency: row.currency,
+          isDefault: row.isDefault,
+          paymentStyle: row.paymentStyle,
+          allocatedQuantity: row.allocatedQuantity,
+          marketplaceId: row.marketplaceId,
+        }],
+        seller: {
+          id: row.sellerId,
+          slug: row.seller_slug,
+          name: userMap.get(row.sellerId)?.name || "Anonymous",
+          imageUrl: userMap.get(row.sellerId)?.imageUrl,
+        },
+        currentMarketplaceId: marketplace.id
+      });
+    } else {
+      // Add additional prices to existing product
+      const product = productsMap.get(productId);
+      if (product) {
+        product.prices.push({
+          id: row.price_id,
+          unitAmount: row.unitAmount,
+          currency: row.currency,
+          isDefault: row.isDefault,
+          paymentStyle: row.paymentStyle,
+          allocatedQuantity: row.allocatedQuantity,
+          marketplaceId: row.marketplaceId,
+        });
+      }
+    }
+  }
+
+  const uniqueProducts = Array.from(productsMap.values());
 
   return (
     <div className="py-24">

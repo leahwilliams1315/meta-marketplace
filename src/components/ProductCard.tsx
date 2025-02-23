@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useCart, formatPrice } from "@/lib/cart";
 import { Heart, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface Price {
   id: string;
@@ -32,6 +33,12 @@ interface ProductProps {
     imageUrl?: string;
   };
   currentMarketplaceId?: string;
+  productTags?: Array<{
+    tag: {
+      id: number;
+      name: string;
+    };
+  }>;
 }
 
 interface ProductCardProps {
@@ -147,9 +154,22 @@ export function ProductCard({ product, productLink }: ProductCardProps) {
       <Link href={productLink || `/user/${product.seller.slug || product.seller.id}/product/${product.id}`}>
         <h3 className="font-semibold mb-2 text-[#453E3E]">{product.name}</h3>
       </Link>
-      <p className="text-muted-foreground text-sm mb-4">
+      <p className="text-muted-foreground text-sm mb-2">
         {product.description}
       </p>
+      {product.productTags && product.productTags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {product.productTags.map((pt) => (
+            <Badge
+              key={pt.tag.id}
+              variant="secondary"
+              className="bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs py-0.5"
+            >
+              {pt.tag.name}
+            </Badge>
+          ))}
+        </div>
+      )}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <span className="text-lg font-bold">{formatPrice(price.unitAmount)}</span>
